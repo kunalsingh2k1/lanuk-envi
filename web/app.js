@@ -19,10 +19,19 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
 
+  // Hooks for the notch, radial menu and stats dock (chrome.js).
+  const emit = (name, detail) => document.dispatchEvent(new CustomEvent("envi:" + name, { detail }));
+  window.Envi = {
+    get state() { return state; }, get providers() { return providers; }, get choice() { return choice; },
+    replies: [], wake: false,
+    showTab: (name) => showTab(name),
+    setModel(provider, model) { choice = { provider, model }; paintChoice(); },
+  };
+
   let state = null, providers = [], choice = store.get("envi.model", { provider: "claude", model: "sonnet" });
   let turns = [], conversationId = null, ctl = null, voiceOut = store.get("envi.voice", false);
   const MODE_LABEL = { idle: "Standby", listening: "Listening", thinking: "Thinking", speaking: "Speaking" };
-  const setMode = (m) => { window.Holo?.setMode(m); $("#mode").textContent = MODE_LABEL[m]; };
+  const setMode = (m) => { window.Holo?.setMode(m); $("#mode").textContent = MODE_LABEL[m]; emit("mode", m); };
 
   /* ---------- panels ---------- */
   const ICON = { ok: "●", warn: "◐", idle: "○", crit: "▲" };
@@ -102,6 +111,7 @@
     $("#greet").textContent = `${h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"}, Kunal.`;
     const open = s.missions.filter((x) => !x.done);
     $("#ticker").textContent = `${s.agents.filter((a) => a.online).length} agents online · ${left >= 0 ? left + " days to launch" : "launched"} · ${open.filter((x) => x.severity === "crit").length} critical missions open`;
+    emit("state");
   }
 
   function money() {
@@ -179,7 +189,7 @@
     $("#switchProv").textContent = p.label; $("#switchModel").textContent = m.label;
     $("#tLink").textContent = `${p.label} · ${m.label}`;
     $("#coModel").textContent = `${p.label} · ${m.label}`;
-    store.set("envi.model", choice);
+    store.set("envi.model", choice); emit("model");
   }
   function buildPop() {
     pop.replaceChildren();
@@ -269,7 +279,7 @@
       try { w.start(); } catch { wakeRec = null; }
     }
     const sendHeard = (text) => { log.lastElementChild?.remove(); send(text).finally(startWake); };
-    function paintWake() { wakeBtn.setAttribute("aria-pressed", String(wakeOn)); wakeBtn.textContent = wakeOn ? "“Hi Envi” on" : "“Hi Envi” off"; }
+    function paintWake() { wakeBtn.setAttribute("aria-pressed", String(wakeOn)); wakeBtn.textContent = wakeOn ? "“Hi Envi” on" : "“Hi Envi” off"; window.Envi.wake = wakeOn; emit("wake", wakeOn); }
     wakeBtn.addEventListener("click", () => { wakeOn = !wakeOn; wakeBlocked = false; store.set("envi.wake", wakeOn); paintWake(); if (wakeOn) startWake(); else stopWake(); });
     document.addEventListener("visibilitychange", () => { if (document.hidden) stopWake(); else startWake(); });
     paintWake(); startWake();
@@ -350,7 +360,7 @@
       x.setAttribute("aria-selected", String(on)); x.tabIndex = on ? 0 : -1;
       document.getElementById(x.getAttribute("aria-controls")).hidden = !on;
     }
-    store.set("envi.tab", t.dataset.tab);
+    store.set("envi.tab", t.dataset.tab); emit("tab", t.dataset.tab);
     if (focus) t.focus();
     if (t.dataset.tab === "activity") loadWall();
   }
@@ -372,7 +382,7 @@
   const PCOL = { claude: "var(--holo)", codex: "var(--ice)", local: "var(--hot)" };
   async function loadWall() {
     try {
-      const { replies } = await api("/api/stats"), box = $("#latBars"); box.replaceChildren();
+      const { replies } = await api("/api/stats"), box = $("#latBars"); box.replaceChildren(); window.Envi.replies = replies; emit("stats");
       if (!replies.length) { $("#latNote").textContent = ""; $("#latLegend").textContent = "No replies saved yet. Ask something and the chart fills in."; }
       else {
         const max = Math.max(...replies.map((r) => r.ms));

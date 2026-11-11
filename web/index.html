@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/restyle.css">
 <link rel="stylesheet" href="/tabs.css">
+<link rel="stylesheet" href="/chrome.css">
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
@@ -27,13 +28,19 @@
   </ul>
 </header>
 
-<nav class="tabs" role="tablist" aria-label="Envi sections">
-  <button role="tab" id="tab-console" aria-controls="view-console" aria-selected="true" data-tab="console">Console</button>
-  <button role="tab" id="tab-agents" aria-controls="view-agents" aria-selected="false" data-tab="agents" tabindex="-1">Agents <span class="badge" id="bAgents"></span></button>
-  <button role="tab" id="tab-money" aria-controls="view-money" aria-selected="false" data-tab="money" tabindex="-1">Money</button>
-  <button role="tab" id="tab-missions" aria-controls="view-missions" aria-selected="false" data-tab="missions" tabindex="-1">Missions <span class="badge" id="bMissions"></span></button>
-  <button role="tab" id="tab-activity" aria-controls="view-activity" aria-selected="false" data-tab="activity" tabindex="-1">Activity</button>
-</nav>
+<div class="notch" id="notch">
+  <div class="notch-slab">
+    <nav class="tabs" role="tablist" aria-label="Envi sections">
+      <button role="tab" id="tab-console" aria-controls="view-console" aria-selected="true" data-tab="console" data-icon="console"><span>Console</span></button>
+      <button role="tab" id="tab-agents" aria-controls="view-agents" aria-selected="false" data-tab="agents" data-icon="agents" tabindex="-1"><span>Agents</span><span class="badge" id="bAgents"></span></button>
+      <button role="tab" id="tab-money" aria-controls="view-money" aria-selected="false" data-tab="money" data-icon="money" tabindex="-1"><span>Money</span></button>
+      <button role="tab" id="tab-missions" aria-controls="view-missions" aria-selected="false" data-tab="missions" data-icon="missions" tabindex="-1"><span>Missions</span><span class="badge" id="bMissions"></span></button>
+      <button role="tab" id="tab-activity" aria-controls="view-activity" aria-selected="false" data-tab="activity" data-icon="activity" tabindex="-1"><span>Activity</span></button>
+    </nav>
+    <p class="notch-status" aria-live="polite"><i class="pix" aria-hidden="true"></i><span id="notchText">Standby</span><span class="notch-sub" id="notchSub"></span></p>
+    <button type="button" class="notch-handle" id="notchHandle" aria-expanded="false" aria-label="Show sections"><i></i></button>
+  </div>
+</div>
 
 <main class="views">
   <!-- CONSOLE -->
@@ -149,5 +156,6 @@
 
 <script src="/hologram.js"></script>
 <script src="/app.js"></script>
+<script src="/chrome.js"></script>
 </body>
 </html>

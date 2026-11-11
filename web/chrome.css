@@ -1,0 +1,173 @@
+/* Envi's chrome: the top notch (tabs + status), the right-edge stats dock and the
+   right-click radial menu. All three are pure black slabs that grow out of a screen edge
+   through concave corners, so they read as part of the bezel rather than floating cards. */
+:root {
+  --slab: #000;
+  --slab-edge: rgba(190, 236, 255, 0.16);
+  --ear: 20px;                                   /* radius of the concave joins */
+  --spring: cubic-bezier(.2, .9, .25, 1.08);     /* arrive: slight overshoot */
+  --leave: cubic-bezier(.5, 0, .9, .4);          /* leave: quick, no bounce */
+}
+
+/* ================= NOTCH ================= */
+.notch {
+  --tabs-h: 54px; --status-h: 30px; --handle-h: 12px;
+  position: fixed; top: 0; left: 50%; z-index: 60; width: min(580px, calc(100vw - 2 * var(--ear) - 16px));
+  transform: translateX(-50%); pointer-events: none;
+}
+.notch-slab {
+  position: relative; pointer-events: auto; background: var(--slab); color: var(--ice);
+  border-radius: 0 0 22px 22px; box-shadow: 0 0 0 1px var(--slab-edge), 0 18px 40px -18px rgba(0, 0, 0, .9);
+  transform: translateY(calc(-100% + var(--handle-h)));
+  transition: transform .26s var(--leave);
+}
+/* concave ears where the slab meets the top edge */
+.notch-slab::before, .notch-slab::after {
+  content: ""; position: absolute; top: 0; width: var(--ear); height: var(--ear); pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+}
+.notch-slab::before { right: 100%; background: radial-gradient(circle at 0 100%, transparent calc(var(--ear) - 1px), var(--slab-edge) calc(var(--ear) - 1px), var(--slab-edge) var(--ear), var(--slab) calc(var(--ear) + .5px)); }
+.notch-slab::after { left: 100%; background: radial-gradient(circle at 100% 100%, transparent calc(var(--ear) - 1px), var(--slab-edge) calc(var(--ear) - 1px), var(--slab-edge) var(--ear), var(--slab) calc(var(--ear) + .5px)); }
+/* an invisible strip under the collapsed line makes it easy to hit */
+.notch::after { content: ""; position: absolute; left: 25%; right: 25%; top: 0; height: 22px; pointer-events: auto; }
+.notch.open::after, .notch.busy::after { display: none; }
+
+.notch.busy .notch-slab { transform: translateY(calc(-1 * var(--tabs-h))); transition: transform .42s var(--spring); }
+.notch.open .notch-slab, .notch:focus-within .notch-slab { transform: none; transition: transform .42s var(--spring); }
+.notch.open .notch-slab::before, .notch.open .notch-slab::after,
+.notch.busy .notch-slab::before, .notch.busy .notch-slab::after,
+.notch:focus-within .notch-slab::before, .notch:focus-within .notch-slab::after { opacity: 1; }
+
+/* tabs inside the notch (overrides the old tab bar) */
+.notch .tabs { display: flex; width: auto; max-width: none; margin: 0; padding: 6px 10px 0; height: var(--tabs-h); border: 0; gap: 2px; }
+.notch .tabs button {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: relative;
+  margin: 0; padding: 4px 2px; border: 0; border-radius: 12px; background: none; cursor: pointer;
+  color: rgba(214, 243, 255, .55); font: 500 9.5px var(--mono); letter-spacing: .14em; text-transform: uppercase;
+  transition: color .15s, background .15s;
+}
+.notch .tabs button svg { width: 17px; height: 17px; }
+.notch .tabs button:hover { color: var(--ice); background: rgba(255, 255, 255, .06); }
+.notch .tabs button[aria-selected="true"] { color: #061000; background: var(--holo); border: 0; }
+.notch .tabs .badge { position: absolute; top: 3px; left: calc(50% + 8px); margin: 0; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; font: 500 9px/14px var(--mono); letter-spacing: 0; text-align: center; display: block; background: var(--ice-dim); color: #000; }
+.notch .tabs .badge:empty { display: none; }
+.notch .tabs .badge.alert { background: var(--hot); }
+.notch .tabs button[aria-selected="true"] .badge { background: #061000; color: var(--holo); }
+
+.notch-status { height: var(--status-h); margin: 0; display: flex; align-items: center; justify-content: center; gap: 9px; font: 500 12px var(--body); color: var(--ice); white-space: nowrap; overflow: hidden; padding: 0 16px; }
+.notch-sub { color: var(--ice-dim); font: 400 11px var(--mono); overflow: hidden; text-overflow: ellipsis; }
+.pix { width: 9px; height: 9px; flex: none; background: var(--ice-dim); box-shadow: 0 0 0 0 transparent; }
+.notch.busy .pix { background: var(--holo); animation: pix 1s steps(2) infinite; box-shadow: 0 0 10px var(--holo); }
+.notch[data-mode="listening"] .pix { background: var(--crit); box-shadow: 0 0 10px var(--crit); }
+@keyframes pix { 50% { transform: rotate(90deg) scale(.7); } }
+
+.notch-handle { display: block; width: 100%; height: var(--handle-h); padding: 0; border: 0; background: none; cursor: pointer; }
+.notch-handle i { display: block; width: 46px; height: 3px; margin: 0 auto; border-radius: 2px; background: rgba(214, 243, 255, .5); transition: width .3s var(--spring), background .2s; }
+.notch:hover .notch-handle i, .notch.open .notch-handle i { width: 64px; background: var(--holo); }
+.notch.armed .notch-handle i { background: var(--holo); box-shadow: 0 0 10px var(--holo); }
+
+/* ================= DOCK ================= */
+.dock {
+  position: fixed; right: 0; top: 50%; z-index: 50; width: 62px; transform: translateY(-50%);
+  background: var(--slab); color: var(--ice); border-radius: 22px 0 0 22px;
+  box-shadow: -1px 0 0 0 var(--slab-edge), 0 1px 0 0 var(--slab-edge), 0 -1px 0 0 var(--slab-edge);
+  padding: 14px 0 10px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  transition: transform .42s var(--spring);
+}
+.dock::before, .dock::after { content: ""; position: absolute; right: 0; width: var(--ear); height: var(--ear); pointer-events: none; }
+.dock::before { bottom: 100%; background: radial-gradient(circle at 0 0, transparent calc(var(--ear) - 1px), var(--slab-edge) calc(var(--ear) - 1px), var(--slab-edge) var(--ear), var(--slab) calc(var(--ear) + .5px)); }
+.dock::after { top: 100%; background: radial-gradient(circle at 0 100%, transparent calc(var(--ear) - 1px), var(--slab-edge) calc(var(--ear) - 1px), var(--slab-edge) var(--ear), var(--slab) calc(var(--ear) + .5px)); }
+.dock-name { font: 500 8px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ice-dim); }
+.gauges { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.gauge { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 54px; padding: 4px 0; border: 0; border-radius: 12px; background: none; color: inherit; cursor: pointer; }
+.gauge:hover { background: rgba(255, 255, 255, .07); }
+.gauge svg { width: 40px; height: 40px; display: block; }
+.gauge .track { fill: none; stroke: rgba(255, 255, 255, .13); stroke-width: 3.5; }
+.gauge .arc { fill: none; stroke-width: 3.5; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .9s cubic-bezier(.2, .8, .2, 1); }
+.gauge .glyph { font: 500 9px var(--mono); fill: var(--ice); text-anchor: middle; dominant-baseline: central; letter-spacing: .02em; }
+.gauge .pct { font: 500 11px var(--mono); font-variant-numeric: tabular-nums; }
+.gauge .cap { font: 400 8px var(--mono); letter-spacing: .06em; color: var(--ice-dim); text-transform: uppercase; max-width: 54px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dock-gear { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--slab-edge); background: #0b0f10; color: var(--ice); display: grid; place-items: center; cursor: pointer; transition: transform .3s var(--spring), border-color .2s; }
+.dock-gear:hover { border-color: var(--holo); transform: rotate(30deg); }
+.dock-gear svg { width: 17px; height: 17px; }
+.dock-pop { position: absolute; right: calc(100% + 10px); bottom: 6px; width: 190px; padding: 6px; background: var(--slab); border-radius: 14px; box-shadow: 0 0 0 1px var(--slab-edge), 0 20px 40px -12px #000; transform-origin: 100% 100%; animation: pop-in .22s var(--spring); }
+.dock-pop[hidden] { display: none; }
+.dock-pop button { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; width: 100%; padding: 9px 10px; border: 0; border-radius: 9px; background: none; color: var(--ice); font: 500 12.5px var(--body); text-align: left; cursor: pointer; }
+.dock-pop button small { font: 400 10px var(--mono); color: var(--ice-dim); }
+.dock-pop button:hover { background: rgba(255, 255, 255, .08); }
+.dock-pop button[aria-checked="true"] { background: var(--holo); color: #061000; }
+.dock-pop button[aria-checked="true"] small { color: #1c3300; }
+@keyframes pop-in { from { opacity: 0; transform: scale(.9) translateX(8px); } }
+.dock-handle { display: none; }
+
+@media (min-width: 861px) { .views, .telemetry { padding-right: 74px; } }
+@media (max-width: 860px) {
+  .dock { transform: translate(calc(100% - 9px), -50%); transition: transform .26s var(--leave); }
+  .dock.open { transform: translateY(-50%); transition: transform .42s var(--spring); }
+  .dock-handle { display: block; position: absolute; left: -14px; top: 0; bottom: 0; width: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .dock-handle i { position: absolute; left: 17px; top: 50%; width: 3px; height: 42px; margin-top: -21px; border-radius: 2px; background: rgba(214, 243, 255, .5); }
+  .dock.open .dock-handle i { background: var(--holo); }
+  .notch .tabs button { letter-spacing: .02em; font-size: 9px; }
+}
+
+/* ================= RADIAL MENU ================= */
+.radial { position: fixed; inset: 0; z-index: 80; }
+.radial[hidden] { display: none; }
+.radial-scrim { position: absolute; inset: 0; background: radial-gradient(circle at var(--x) var(--y), rgba(3, 8, 9, .78), rgba(3, 8, 9, .9) 460px); animation: fade .18s ease-out; }
+.radial-ring { position: absolute; left: var(--x); top: var(--y); width: 248px; height: 248px; margin: -124px 0 0 -124px; animation: ring-in .34s var(--spring); }
+.radial.closing .radial-ring { animation: ring-out .12s var(--leave) forwards; }
+.radial.closing .radial-scrim, .radial.closing .radial-fan { animation: fade .12s reverse forwards; }
+@keyframes ring-in { from { opacity: 0; transform: scale(.72) rotate(-28deg); } }
+@keyframes ring-out { to { opacity: 0; transform: scale(.86); } }
+@keyframes fade { from { opacity: 0; } }
+.radial-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.radial .base { fill: #0a0f10; stroke: var(--slab-edge); }
+.seg { cursor: pointer; outline: none; }
+.seg path { fill: rgba(255, 255, 255, .07); stroke: rgba(255, 255, 255, .07); stroke-width: 5; stroke-linejoin: round; transition: fill .14s, stroke .14s; }
+.seg .ico { color: rgba(214, 243, 255, .62); transition: color .14s; }
+.seg:hover path, .seg:focus-visible path { fill: rgba(255, 255, 255, .16); stroke: rgba(255, 255, 255, .16); }
+.seg:hover .ico, .seg:focus-visible .ico { color: var(--ice); }
+.seg.on path { fill: var(--holo); stroke: var(--holo); }
+.seg.on .ico { color: #061000; }
+.seg:focus-visible path { stroke: var(--ice); stroke-width: 2; }
+.knob {
+  position: absolute; left: 50%; top: 50%; width: 88px; height: 88px; margin: -44px 0 0 -44px; border-radius: 50%; border: 0; cursor: pointer; color: #1a211c;
+  background: radial-gradient(circle at 34% 28%, #ffffff, #e3e9df 52%, #a9b3a6);
+  box-shadow: 0 0 0 3px #cfd6cb, 0 0 0 4px #7d877b, 0 10px 22px rgba(0, 0, 0, .7), 0 0 26px rgba(200, 255, 0, .22), inset 0 -3px 6px rgba(0, 0, 0, .18);
+  display: grid; place-items: center; transition: transform .18s var(--spring);
+}
+.knob::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; border: 1px dotted rgba(26, 33, 28, .55); }
+.knob:hover { transform: scale(1.04); }
+.knob:active { transform: scale(.97); }
+.knob svg { width: 22px; height: 22px; }
+.knob span { position: absolute; bottom: 17px; font: 500 7px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+
+.radial-fan { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; }
+.radial-fan > svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.radial-fan > svg path { fill: none; stroke: var(--ice-faint); stroke-width: 1; stroke-linejoin: round; transition: d .16s; }
+.fan-title { position: absolute; font: 500 9px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--ice-dim); white-space: nowrap; }
+.fan-item {
+  position: absolute; display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; white-space: nowrap; cursor: pointer;
+  background: rgba(20, 26, 28, .92); color: rgba(214, 243, 255, .7); border: 1px solid var(--slab-edge); border-radius: 11px;
+  font: 500 13.5px var(--body); transform-origin: var(--ox) 50%;
+  transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+  animation: fan-in .3s var(--spring) backwards; animation-delay: calc(var(--i) * 28ms);
+  transition: background .14s, color .14s, border-color .14s, transform .18s var(--spring);
+}
+.fan-item svg { width: 16px; height: 16px; flex: none; }
+.fan-item small { font: 400 10.5px var(--mono); color: var(--ice-dim); margin-left: 4px; }
+.fan-item.hi, .fan-item:hover, .fan-item:focus-visible { background: #1d2528; color: #fff; border-color: rgba(214, 243, 255, .5); transform: translate(calc(var(--dx) + var(--nudge)), var(--dy)) rotate(0deg); outline: none; }
+.fan-item[aria-checked="true"] { color: var(--holo); }
+.fan-item:disabled { opacity: .45; cursor: not-allowed; }
+@keyframes fan-in { from { opacity: 0; transform: translate(calc(var(--dx) - var(--nudge) * 3), var(--dy)) rotate(var(--rot)) scale(.9); } }
+
+/* phones: the fan becomes a plain list under the ring, with full-size touch targets */
+.radial-fan.stack { left: 16px; right: 16px; top: calc(var(--y) + 142px); width: auto; height: auto; display: flex; flex-direction: column; gap: 8px; }
+.radial-fan.stack > svg { display: none; }
+.radial-fan.stack .fan-title { position: static; text-align: center; }
+.radial-fan.stack .fan-item, .radial-fan.stack .fan-item.hi { position: static; transform: none; flex: none; height: 46px; animation-name: fade; }
+
+@media (prefers-reduced-motion: reduce) {
+  .notch-slab, .dock, .gauge .arc, .knob, .fan-item { transition: none; }
+  .radial-ring, .radial-scrim, .fan-item, .dock-pop, .notch.busy .pix { animation: none; }
+}

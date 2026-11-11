@@ -94,3 +94,6 @@ body { display: flex; flex-direction: column; height: 100dvh; }
   .v-one .missions-wrap { padding: 10px 12px; }
 }
 @media (max-width: 860px) { .callout dd { font-size: 10px; padding: 4px 5px; letter-spacing: -0.02em; } }
+
+/* The tab bar now lives in the notch (chrome.css), so the header is the only fixed row. */
+.telemetry { padding-top: 16px; }
