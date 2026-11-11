@@ -10,8 +10,10 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 - **Changed:** added `AGENTS.md`, `CLAUDE.md` and `docs/` (STATUS, LOG, PRD, ARCHITECTURE, DESIGN_SYSTEM,
   DATABASE, SECURITY, CODE_STYLE, TESTING) so Codex and Claude Code start from the same files.
   Added `server/selftest.js`, which makes `npm run check` work.
-- **Verified:** `npm run check` passes 7 checks against the running server.
-- **Not verified:** that Codex picks up `AGENTS.md` on its own in this folder (expected, not run).
+- **Verified:** `npm run check` passes 7 checks against the running server. Codex, run in this folder
+  with no other prompt context, answered from `AGENTS.md` that it must read `docs/STATUS.md` first and
+  quoted the first rule. No broken links; no secrets in the new files.
+- **Not verified:** a full Codex working session from these docs.
 
 ## 2026-11-12 · Claude · 3D station hologram and cut edges (`655557f`)
 
