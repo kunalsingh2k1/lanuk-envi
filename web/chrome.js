@@ -268,5 +268,14 @@
   });
   addEventListener("resize", close);
 
+  /* ================= STATION READOUTS ================= */
+  const HUD_STATE = { idle: "Orbit stable", listening: "Receiving voice", thinking: "Layers working", speaking: "Transmitting" };
+  on("mode", (m) => { const n = $("#hudState"); if (n) n.textContent = HUD_STATE[m] || ""; });
+  if (window.Holo) window.Holo.onOrient = (yaw, pitch, layers) => {
+    $("#hudYaw").textContent = String(Math.round(yaw)).padStart(3, "0");
+    $("#hudPitch").textContent = (pitch >= 0 ? "+" : "-") + String(Math.abs(Math.round(pitch))).padStart(2, "0");
+    $("#hudLayers").textContent = String(Math.round(layers * 100)).padStart(2, "0");
+  };
+
   paintStatus();
 })();
