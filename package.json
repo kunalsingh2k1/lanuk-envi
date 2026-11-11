@@ -1,0 +1,22 @@
+{
+  "name": "lanuk-envi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lanuk Office command interface: one chat for Claude, Codex and local Ollama models, served from this PC.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "check": "node server/selftest.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.6",
+    "@supabase/supabase-js": "2.119.0",
+    "dotenv": "18.0.10",
+    "hono": "4.13.17"
+  }
+}
