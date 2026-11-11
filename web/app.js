@@ -208,17 +208,53 @@
   }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR) {
-    const mic = $("#micBtn"), input = $("#input"); mic.hidden = false;
-    let rec = null, base = "";
-    mic.addEventListener("click", () => {
-      if (rec) { rec.stop(); return; }
-      rec = new SR(); rec.lang = "en-IN"; rec.interimResults = true; rec.continuous = false; base = input.value ? input.value + " " : "";
+    const mic = $("#micBtn"), input = $("#input"), wakeBtn = $("#wakeBtn"); mic.hidden = false; wakeBtn.hidden = false;
+    let rec = null, base = "", wakeOn = store.get("envi.wake", false), wakeRec = null, wakeBlocked = false;
+
+    // Speech engines write "Envi" many ways. Returns the words after the wake phrase, or null.
+    const WAKE = /\b(?:hi|hey|hai|hello|high)[\s,]+(?:envi|envy|n\.?\s?v\.?|en\s?v(?:ee|i|y)?|anvi|envie|enby|and\s?v)\b[\s,.!?]*/i;
+    const afterWake = (heard) => { const m = heard.match(WAKE); return m ? heard.slice(m.index + m[0].length).trim() : null; };
+
+    function listen(prefill = "") {
+      if (rec) return;
+      stopWake();
+      rec = new SR(); rec.lang = "en-IN"; rec.interimResults = true; rec.continuous = false; base = prefill ? prefill + " " : (input.value ? input.value + " " : "");
       rec.onstart = () => { mic.classList.add("live"); mic.setAttribute("aria-label", "Stop listening"); setMode("listening"); };
       rec.onresult = (e) => { input.value = base + [...e.results].map((r) => r[0].transcript).join(""); grow(); };
-      rec.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { mic.hidden = true; $("#hint").textContent = "Microphone is blocked for this page. Typing works."; } };
-      rec.onend = () => { mic.classList.remove("live"); mic.setAttribute("aria-label", "Speak"); rec = null; if (window.Holo?.mode === "listening") setMode("idle"); if (input.value.trim() && !ctl) send(input.value.trim()); };
+      rec.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { mic.hidden = true; wakeBtn.hidden = true; wakeBlocked = true; $("#hint").textContent = "Microphone is blocked for this page. Typing works."; } };
+      rec.onend = () => { mic.classList.remove("live"); mic.setAttribute("aria-label", "Speak"); rec = null; if (window.Holo?.mode === "listening") setMode("idle"); if (input.value.trim() && !ctl) send(input.value.trim()); startWake(); };
       rec.start();
-    });
+    }
+    mic.addEventListener("click", () => { if (rec) rec.stop(); else listen(); });
+
+    // Wake phrase: a second, continuous recogniser that only looks for "Hi Envi".
+    function stopWake() { if (wakeRec) { const w = wakeRec; wakeRec = null; w.onend = null; try { w.abort(); } catch {} } }
+    function startWake() {
+      if (!wakeOn || wakeBlocked || wakeRec || rec || document.hidden) return;
+      const w = new SR(); w.lang = "en-IN"; w.interimResults = true; w.continuous = true;
+      w.onresult = (e) => {
+        if (ctl || synth?.speaking) return;                 // don't let Envi's own voice wake it
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const rest = afterWake(e.results[i][0].transcript);
+          if (rest === null) continue;
+          if (!e.results[i].isFinal && rest === "") continue; // wait to see if a command follows
+          stopWake();
+          if (rest && e.results[i].isFinal) { addMsg("u", rest); input.value = ""; sendHeard(rest); }
+          else listen(rest);
+          return;
+        }
+      };
+      w.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { wakeBlocked = true; wakeOn = false; paintWake(); $("#hint").textContent = "Allow the microphone for this page to use “Hi Envi”."; } };
+      w.onend = () => { if (wakeRec === w) { wakeRec = null; setTimeout(startWake, 400); } }; // browsers end it every minute or so
+      wakeRec = w;
+      try { w.start(); } catch { wakeRec = null; }
+    }
+    const sendHeard = (text) => { log.lastElementChild?.remove(); send(text).finally(startWake); };
+    function paintWake() { wakeBtn.setAttribute("aria-pressed", String(wakeOn)); wakeBtn.textContent = wakeOn ? "“Hi Envi” on" : "“Hi Envi” off"; }
+    wakeBtn.addEventListener("click", () => { wakeOn = !wakeOn; wakeBlocked = false; store.set("envi.wake", wakeOn); paintWake(); if (wakeOn) startWake(); else stopWake(); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) stopWake(); else startWake(); });
+    paintWake(); startWake();
+    window.__enviWake = afterWake; // for tests
   }
 
   /* ---------- chat ---------- */
