@@ -53,6 +53,8 @@ app.patch("/api/missions/:id", async (c) => {
   return c.json({ mission: row });
 });
 
+app.get("/api/stats", async (c) => c.json({ replies: await store.recentReplies() }));
+
 app.get("/api/conversations", async (c) => c.json({ conversations: await store.listConversations() }));
 app.get("/api/conversations/:id", async (c) => c.json({ messages: await store.getConversation(c.req.param("id")) }));
 
@@ -117,6 +119,8 @@ app.post("/api/chat", async (c) => {
   });
 });
 
+// Always revalidate the page files, so an update shows up on the next load.
+app.use("/*", async (c, next) => { await next(); if (!c.req.path.startsWith("/api/")) c.header("Cache-Control", "no-cache"); });
 app.use("/*", serveStatic({ root: WEB }));
 app.get("*", serveStatic({ path: path.join(WEB, "index.html") }));
 

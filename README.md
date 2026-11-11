@@ -25,9 +25,10 @@ restarts it if it stops. Logs go to `logs\envi.log`. Set Windows to sign in auto
 PC should recover from a power cut by itself.
 
 ## Put it online
-1. Add your domain to Cloudflare.
-2. Zero Trust > Access > Applications: add a self-hosted app for `envi.<domain>`, allow only your email.
-3. `cloudflared tunnel login`, then `.\scripts\tunnel.ps1 -Hostname envi.<domain>` as Administrator.
+This PC already runs a Cloudflare tunnel as a Windows service (the one serving n8n). Envi is one more
+hostname on that tunnel, added in the Cloudflare Zero Trust dashboard:
+1. Access > Applications: add a self-hosted app for `envi.<domain>`, allow only your email. Do this first.
+2. Networks > Tunnels > the existing tunnel > Public Hostname: `envi.<domain>` to HTTP `127.0.0.1:4777`.
 
 The server listens on 127.0.0.1 only. Never forward port 4777 on the router.
 

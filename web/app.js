@@ -78,6 +78,22 @@
 
     renderMissions();
 
+    // callouts around the dial
+    const openM = s.missions.filter((x) => !x.done), critM = openM.filter((x) => x.severity === "crit").length;
+    $("#coLaunch").textContent = left >= 0 ? `T-${left} days` : "Live";
+    $("#coMissions").textContent = `${openM.length} open · ${critM} crit`;
+    $("#coCost").textContent = `${inr(m.ai)} / mo`;
+
+    // missions by type
+    const types = {}; for (const x of s.missions) { (types[x.tag] ||= { open: 0, done: 0 })[x.done ? "done" : "open"]++; }
+    const tb = $("#typeBars"); tb.replaceChildren();
+    const maxT = Math.max(1, ...Object.values(types).map((v) => v.open + v.done));
+    for (const [tag, v] of Object.entries(types)) {
+      const li = el("li"), track = el("span", "track"), fill = el("i"), dn = el("i", "dn");
+      fill.style.width = `${(v.open / maxT) * 100}%`; dn.style.width = `${(v.done / maxT) * 100}%`; track.append(dn, fill);
+      li.append(el("span", "hn", tag), track, el("span", "hv", `${v.open} open${v.done ? ` · ${v.done} done` : ""}`)); tb.append(li);
+    }
+
     // telemetry + greeting
     $("#tDb").textContent = s.db ? "Connected" : "Not set up"; $("#tDb").className = `v ${s.db ? "on" : "off"}`;
     $("#tVault").textContent = s.vaultFound ? "Found" : "Missing"; $("#tVault").className = `v ${s.vaultFound ? "on" : "off"}`;
@@ -160,6 +176,7 @@
     if (!m) { const first = providers.find((x) => x.models.length); if (first) choice = { provider: first.id, model: first.models[0].id }; return first ? paintChoice() : null; }
     $("#switchProv").textContent = p.label; $("#switchModel").textContent = m.label;
     $("#tLink").textContent = `${p.label} · ${m.label}`;
+    $("#coModel").textContent = `${p.label} · ${m.label}`;
     store.set("envi.model", choice);
   }
   function buildPop() {
@@ -301,7 +318,7 @@
       node.txt.textContent = got.text; turns.push({ role: "assistant", content: got.text });
       finishMeta(node, { ...got, question: text });
       $("#tMs").textContent = `${(got.ms / 1000).toFixed(1)}s`;
-      setMode("idle"); say(got.text);
+      setMode("idle"); say(got.text); loadWall();
     } catch (e) {
       setMode("idle");
       if (mine.signal.aborted) { node.meta.textContent = "stopped"; if (answer) turns.push({ role: "assistant", content: answer }); else turns.pop(); }
@@ -325,11 +342,27 @@
   /* ---------- boot ---------- */
   function tick() { const d = istNow(), p = (n) => String(n).padStart(2, "0"); $("#tClock").textContent = `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`; }
   async function loadState() { try { state = await api("/api/state"); render(); } catch (e) { $("#ticker").textContent = `Can't reach the Envi server: ${e.message}`; } }
+  const PCOL = { claude: "var(--holo)", codex: "var(--ice)", local: "var(--hot)" };
+  async function loadWall() {
+    try {
+      const { replies } = await api("/api/stats"), box = $("#latBars"); box.replaceChildren();
+      if (!replies.length) { $("#latNote").textContent = ""; $("#latLegend").textContent = "No replies saved yet. Ask something and the chart fills in."; }
+      else {
+        const max = Math.max(...replies.map((r) => r.ms));
+        for (const r of replies) { const b = el("i"); b.style.height = `${Math.max(4, (r.ms / max) * 100)}%`; b.style.background = PCOL[r.provider] || "var(--ice-dim)"; b.title = `${r.provider}/${r.model} · ${(r.ms / 1000).toFixed(1)}s`; box.append(b); }
+        const avg = replies.reduce((t, r) => t + r.ms, 0) / replies.length;
+        $("#latNote").textContent = `last ${replies.length} · avg ${(avg / 1000).toFixed(1)}s`;
+        $("#latLegend").textContent = "Lime: Claude · White: Codex · Orange: local. Tallest bar " + (max / 1000).toFixed(1) + "s.";
+      }
+      const { conversations } = await api("/api/conversations"), cl = $("#chats");
+      if (conversations.length) { cl.replaceChildren(); for (const c of conversations.slice(0, 6)) { const li = el("li"); li.append(el("span", "ct", c.title), el("span", "cd", new Date(c.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }))); cl.append(li); } }
+    } catch {}
+  }
   async function loadModels() { try { providers = (await api("/api/models")).providers; paintChoice(); } catch { $("#tLink").textContent = "offline"; } }
 
   addMsg("j", "Online, Kunal. Choose a model beside the message box, then ask. The four buttons below give instant read-outs without using any model.");
   tick(); setInterval(tick, 1000);
-  loadState(); loadModels();
+  loadState(); loadModels(); loadWall();
   setInterval(loadState, 60_000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { loadState(); loadModels(); } });
 })();

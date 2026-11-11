@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;500;600&family=Syncopate:wght@400;700&display=swap">
 <link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/restyle.css">
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
@@ -38,9 +39,17 @@
   </aside>
 
   <section class="core" aria-label="Envi">
-    <div class="holo" id="holoBox">
-      <canvas id="holo" aria-hidden="true"></canvas>
-      <div class="holo-mode"><span id="mode">Standby</span></div>
+    <div class="holo">
+      <div class="dial" id="holoBox">
+        <canvas id="holo" aria-hidden="true"></canvas>
+        <div class="holo-mode"><span id="mode">Standby</span></div>
+      </div>
+      <dl class="callouts" aria-label="Key numbers">
+        <div class="callout c-tl"><dt>Launch</dt><dd id="coLaunch">—</dd></div>
+        <div class="callout c-bl"><dt>Missions</dt><dd id="coMissions">—</dd></div>
+        <div class="callout c-tr"><dt>Model</dt><dd id="coModel">—</dd></div>
+        <div class="callout c-br hot"><dt>AI stack</dt><dd id="coCost">—</dd></div>
+      </dl>
     </div>
     <h1 class="greet" id="greet">Good evening, Kunal.</h1>
     <p class="sub" id="ticker">Bringing systems online…</p>
@@ -104,6 +113,22 @@
   <h2 id="hMissions" class="label">Mission queue <span class="label-aside" id="missionCount"></span></h2>
   <ol class="missions" id="missions"></ol>
   <p class="fine" id="missionNote"></p>
+</section>
+
+<section class="wall" aria-label="Activity">
+  <div class="glass">
+    <h2 class="label">Reply times <span class="label-aside" id="latNote"></span></h2>
+    <div class="bars" id="latBars" role="img" aria-label="Seconds per reply, most recent on the right"></div>
+    <p class="fine" id="latLegend"></p>
+  </div>
+  <div class="glass">
+    <h2 class="label">Missions by type</h2>
+    <ul class="hbars" id="typeBars"></ul>
+  </div>
+  <div class="glass">
+    <h2 class="label">Recent chats</h2>
+    <ul class="chats" id="chats"><li class="placeholder">No saved chats yet.</li></ul>
+  </div>
 </section>
 
 <footer class="fine foot">Runs on Kunal's PC · Claude and Codex use your subscriptions · Local models run free on this PC's GPU</footer>

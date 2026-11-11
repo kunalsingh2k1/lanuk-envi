@@ -71,3 +71,11 @@ export async function getConversation(id) {
   if (!s) return [];
   return must(await s.from("envi_messages").select("role,content,provider,model,ms,created_at").eq("conversation_id", id).order("created_at"));
 }
+
+// Recent assistant replies, oldest first, for the reply-time chart.
+export async function recentReplies(limit = 30) {
+  const s = db();
+  if (!s) return [];
+  const rows = must(await s.from("envi_messages").select("provider,model,ms,created_at").eq("role", "assistant").not("ms", "is", null).order("created_at", { ascending: false }).limit(limit));
+  return rows.reverse();
+}
