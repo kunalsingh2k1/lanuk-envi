@@ -11,11 +11,19 @@ Envi is Lanuk Office's command interface. One chat, three kinds of model:
 It reads live state from the Obsidian vault (`LANUK OFFICE/`), stores chats, missions and money
 in Supabase (project `lanuk-x`, tables `envi_*`), and logs every exchange to `LANUK OFFICE/Envi/`.
 
+## For agents and for future you
+
+Start with [AGENTS.md](AGENTS.md). It points to [docs/STATUS.md](docs/STATUS.md) (what is done and what is next),
+[docs/LOG.md](docs/LOG.md) (history) and the topic docs: [PRD](docs/PRD.md), [Architecture](docs/ARCHITECTURE.md),
+[Design system](docs/DESIGN_SYSTEM.md), [Database](docs/DATABASE.md), [Security](docs/SECURITY.md),
+[Code style](docs/CODE_STYLE.md), [Testing](docs/TESTING.md). Claude Code and Codex both read the same files.
+
 ## Run it
 ```
 npm install
 copy .env.example .env      # then paste the Supabase service_role key into .env
 npm start                   # http://127.0.0.1:4777
+npm run check               # smoke test against the running server
 ```
 Without the key Envi still works; missions are read-only and chats aren't saved to Supabase.
 
