@@ -1,0 +1,96 @@
+/* One screen, five tabs. The page itself never scrolls: header and tab bar are fixed rows,
+   and the active view fills what is left. Only the chat log, the model menu and (on a
+   small phone) a long list scroll inside their own box. */
+html, body { height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; height: 100dvh; }
+.telemetry { flex: none; width: 100%; margin-bottom: 0; padding-block: 10px 8px; }
+
+.tabs { flex: none; display: flex; width: 100%; max-width: 1440px; margin: 0 auto; border-bottom: 1px solid var(--edge); }
+.tabs button {
+  flex: 1; min-width: 0; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;
+  padding: 11px 6px 9px; color: var(--ice-dim); font: 500 11px var(--mono); letter-spacing: 0.2em; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tabs button:hover { color: var(--ice); }
+.tabs button[aria-selected="true"] { color: var(--holo); border-bottom-color: var(--holo); background: linear-gradient(0deg, rgba(200,255,0,.07), transparent); }
+.badge { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: 10px; letter-spacing: 0; color: #061000; background: var(--ice-dim); }
+.badge:empty { display: none; }
+.badge.alert { background: var(--hot); }
+
+.views { flex: 1; min-height: 0; width: 100%; max-width: 1440px; margin: 0 auto; padding-block: 16px; }
+.view { height: 100%; min-height: 0; display: grid; gap: 18px; }
+.view[hidden] { display: none; }
+.view > .glass { min-height: 0; }
+.view .fine { margin: 8px 0 0; }
+.mission { align-content: start; }
+
+/* Console: dial on the left, chat on the right, both the full height */
+.v-console { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+.v-console .core { justify-content: center; min-height: 0; }
+.v-console .holo { max-width: 700px; }
+.v-console .dial { width: min(430px, 100%, calc(100dvh - 300px)); }
+.v-console .console { max-width: none; height: 100%; min-height: 0; }
+.v-console .log { flex: 1; min-height: 0; max-height: none; }
+.greet { margin-top: 10px; }
+.sub { margin-bottom: 0; }
+
+/* Two, one and three panel views */
+.v-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; }
+.v-one { grid-template-columns: minmax(0, 1fr); }
+.v-three { grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; }
+.v-one .missions-wrap { margin: 0; max-width: none; height: 100%; display: flex; flex-direction: column; }
+.v-one .missions { flex: 1; min-height: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 1fr; }
+.v-two .glass { padding: 20px 22px 22px; }
+.v-two .agents, .v-two .clients { gap: 18px; }
+.v-three .bars { height: min(220px, 30dvh); }
+
+@media (max-width: 1000px) {
+  .v-one .missions { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }
+  .v-three { grid-template-columns: minmax(0, 1fr); }
+  .v-three .bars { height: 90px; }
+}
+
+/* Phone: dial on top, chat below; tabs keep to one row */
+@media (max-width: 860px) {
+  .telemetry { gap: 4px 14px; }
+  .tele li:nth-child(n+2):nth-child(-n+4) { display: none; }   /* keep model and clock */
+  .tabs button { letter-spacing: 0.04em; font-size: 10.5px; padding-inline: 2px; }
+  .views { padding-block: 10px; }
+  .view { gap: 10px; }
+  .v-console { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .v-console .core { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; }
+  .v-console .holo { display: contents; }
+  .v-console .dial { width: min(34vw, 22dvh); margin: 0; }
+  .v-console .callouts { margin: 0; gap: 6px; }
+  .callout dt { font-size: 8.5px; margin-bottom: 2px; }
+  .callout dd { font-size: 11px; padding: 4px 6px; }
+  .holo-mode, .greet, .sub { display: none; }
+  .v-console .console { padding: 10px; gap: 8px; }
+  .quick { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .quick button { white-space: nowrap; }
+  .cmd-foot #hint { display: none; }
+  .v-two { grid-template-columns: minmax(0, 1fr); }
+  .v-one .missions { grid-template-columns: minmax(0, 1fr); }
+  .mission .w { display: none; }
+  .mission { padding: 9px 10px; }
+  /* last resort on a short phone: a long panel scrolls inside itself, never the page */
+  .v-two > .glass, .v-one > .glass, .v-three > .glass { overflow-y: auto; scrollbar-width: thin; }
+  .v-two, .v-three { grid-auto-rows: min-content; overflow-y: auto; }
+}
+
+/* Panels appear at once when a tab opens; the dial keeps its start-up sequence. */
+.glass { animation: none; }
+.v-console, .v-one { overflow: hidden; }
+
+@media (max-width: 860px) {
+  .tabs .badge { display: none; }
+  .tabs button { letter-spacing: 0; font-size: 10px; }
+  .v-console .callouts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; }
+  .v-one .missions { gap: 6px; }
+  .mission { padding: 7px 9px; gap: 2px 10px; }
+  .mission .t { font-size: 13px; line-height: 1.3; }
+  .mission .tag { margin-top: 0; }
+  .mission .st { font-size: 9px; }
+  .v-one .missions-wrap { padding: 10px 12px; }
+}
+@media (max-width: 860px) { .callout dd { font-size: 10px; padding: 4px 5px; letter-spacing: -0.02em; } }

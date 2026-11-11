@@ -39,6 +39,7 @@
       ag.append(li);
     }
     $("#agentCount").textContent = `${s.agents.filter((a) => a.online).length} online`;
+    $("#bAgents").textContent = String(s.agents.filter((a) => a.online).length);
 
     // clients
     const cl = $("#clients"); cl.replaceChildren();
@@ -134,6 +135,7 @@
     }
     const open = rows.filter((m) => !m.done);
     $("#missionCount").textContent = `${open.length} open · ${open.filter((m) => m.severity === "crit").length} critical`;
+    const bm = $("#bMissions"); bm.textContent = open.length ? String(open.length) : ""; bm.classList.toggle("alert", open.some((m) => m.severity === "crit"));
     $("#missionNote").textContent = state.db ? "Ticks are saved to Supabase." : "Read-only until the Supabase key is added to envi/.env.";
   }
 
@@ -338,6 +340,31 @@
     addMsg("u", QUICK[b.dataset.local]); addMsg("j", out, "instant · from your files");
     say(out);
   }));
+
+  /* ---------- tabs ---------- */
+  const tabs = [...document.querySelectorAll(".tabs [role=tab]")];
+  function showTab(name, focus) {
+    const t = tabs.find((x) => x.dataset.tab === name) || tabs[0];
+    for (const x of tabs) {
+      const on = x === t;
+      x.setAttribute("aria-selected", String(on)); x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute("aria-controls")).hidden = !on;
+    }
+    store.set("envi.tab", t.dataset.tab);
+    if (focus) t.focus();
+    if (t.dataset.tab === "activity") loadWall();
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => showTab(t.dataset.tab));
+    t.addEventListener("keydown", (e) => {
+      const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (d) { e.preventDefault(); showTab(tabs[(i + d + tabs.length) % tabs.length].dataset.tab, true); }
+    });
+  });
+  document.addEventListener("keydown", (e) => {   // Alt+1..5 jumps to a tab
+    if (e.altKey && e.key >= "1" && e.key <= String(tabs.length)) { e.preventDefault(); showTab(tabs[+e.key - 1].dataset.tab, true); }
+  });
+  showTab(location.hash.slice(1) || store.get("envi.tab", "console"));
 
   /* ---------- boot ---------- */
   function tick() { const d = istNow(), p = (n) => String(n).padStart(2, "0"); $("#tClock").textContent = `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`; }
