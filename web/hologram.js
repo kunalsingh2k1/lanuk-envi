@@ -159,25 +159,13 @@
   const lvl = (v, levels) => { let i = 0; while (i < levels.length - 1 && v > (levels[i] + levels[i + 1]) / 2) i++; return i; };
 
   /* ================= BACKGROUND ================= */
-  // Stars, a nebula and the planet do not move, so they are painted once per size.
+  // The planet does not move, so it is painted once per size.
   function paintBg() {
     bg = document.createElement("canvas"); bg.width = W * dpr; bg.height = H * dpr;
     const b = bg.getContext("2d"); b.setTransform(dpr, 0, 0, dpr, 0, 0);
     let s = 7; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    b.fillStyle = "#04080d"; b.fillRect(0, 0, W, H);
-    for (let i = 0; i < 14; i++) {              // nebula: soft blue clouds, brighter toward the upper right
-      const x = W * (0.35 + r() * 0.65), y = H * (r() * 0.7), rad = Math.max(W, H) * (0.12 + r() * 0.22);
-      const c = b.createRadialGradient(x, y, 0, x, y, rad);
-      c.addColorStop(0, `rgba(${60 + r() * 40 | 0},${110 + r() * 50 | 0},${160 + r() * 40 | 0},${0.05 + r() * 0.06})`); c.addColorStop(1, "rgba(40,90,140,0)");
-      b.fillStyle = c; b.fillRect(0, 0, W, H);
-    }
+    // transparent: the page-wide sky (stars.js) shows through; only the planet is painted here
     const pr = Math.max(W, 900) * 1.25, pcx = W * 0.32, pcy = H * 0.9 + pr;
-    for (let i = 0; i < 420; i++) {
-      const x = r() * W, y = r() * H, m = r();
-      if (Math.hypot(x - pcx, y - pcy) < pr + 6) continue;
-      b.fillStyle = `rgba(${m > 0.88 ? "255,226,170" : "200,228,255"},${0.1 + m * m * 0.6})`;
-      const z = m > 0.95 ? 1.7 : m > 0.6 ? 1.1 : 0.7; b.fillRect(x, y, z, z);
-    }
     const at = b.createRadialGradient(pcx, pcy, pr - 6, pcx, pcy, pr + 80);
     at.addColorStop(0, "rgba(130,205,255,0.55)"); at.addColorStop(0.1, "rgba(80,160,240,0.22)"); at.addColorStop(1, "rgba(60,140,230,0)");
     b.fillStyle = at; b.beginPath(); b.arc(pcx, pcy, pr + 80, 0, TAU); b.fill();
@@ -224,13 +212,75 @@
     out[o] = CX + X * S * d; out[o + 1] = CY + (yy * cpt - Z * spt) * S * d;
   }
 
+  /* ================= PARTICLE FACE ================= */
+  // After the "Your Jarvis needs a face" reference. At rest the particles form the Envi star.
+  // Listening: an amber sphere that swells with the voice. Speaking: a violet sphere that ripples
+  // with each word. Working: they stream outward and hand over to the ship.
+  const NP = 2400, PP = new Float32Array(NP * 3), STAR = new Float32Array(NP * 3), SPH = new Float32Array(NP * 3), PK = new Float32Array(NP);
+  for (let i = 0; i < NP; i++) {
+    const u = rnd(), v = rnd(), w = rnd(); let x, y, z = (rnd() - 0.5) * 0.08;
+    if (i < NP * 0.46) {                      // the four long points
+      const k = i % 4, a = (k * Math.PI) / 2, d = Math.pow(u, 1.7), wd = (1 - d) * 0.075 * (v - 0.5) * 2 * Math.sqrt(w);
+      x = Math.cos(a) * d - Math.sin(a) * wd; y = Math.sin(a) * d + Math.cos(a) * wd;
+    } else if (i < NP * 0.56) {               // four short diagonal points
+      const k = i % 4, a = (k * Math.PI) / 2 + Math.PI / 4, d = Math.pow(u, 1.6) * 0.38, wd = (1 - d / 0.38) * 0.03 * (v - 0.5) * 2;
+      x = Math.cos(a) * d - Math.sin(a) * wd; y = Math.sin(a) * d + Math.cos(a) * wd;
+    } else if (i < NP * 0.9) {                // bright core
+      const a = u * TAU, r = 0.17 * Math.sqrt(-2 * Math.log(v + 1e-6)) * 0.55;
+      x = Math.cos(a) * r; y = Math.sin(a) * r; z = (w - 0.5) * r;
+    } else {                                  // a faint ring, the old circle core
+      const a = u * TAU, r = 0.62 + (v - 0.5) * 0.05; x = Math.cos(a) * r; y = Math.sin(a) * r;
+    }
+    STAR.set([x, y, z], i * 3);
+    const yy = 1 - (2 * (i + 0.5)) / NP, rr = Math.sqrt(1 - yy * yy), th = i * 2.39996323;   // even points on a sphere
+    SPH.set([Math.cos(th) * rr, yy, Math.sin(th) * rr], i * 3);
+    PP.set([x * 0.2, y * 0.2, z], i * 3); PK[i] = 0.04 + rnd() * 0.07;
+  }
+  const FC = { star: [255, 236, 200], listening: [255, 186, 72], speaking: [226, 140, 236], thinking: [140, 210, 255] };
+  let fcol = [...FC.star], faceVis = 0;
+  const PB = [new Path2D(), new Path2D(), new Path2D()];
+  function face(now, hub, fe, fade) {
+    const sphere = mode === "listening" || mode === "speaking";
+    const tc = FC[sphere ? mode : fe > 0.3 ? "thinking" : "star"];
+    for (let k = 0; k < 3; k++) fcol[k] += (tc[k] - fcol[k]) * 0.06;
+    faceVis += ((1 - smooth(form * 1.6)) - faceVis) * (reduce ? 1 : 0.08);
+    if (faceVis < 0.01) return;
+    const R = Math.min(W, H) * 0.3 * zoom, ry = t * 0.35, cr = Math.cos(ry), sr = Math.sin(ry);
+    const wob = reduce ? 0 : Math.sin(t * 0.5) * 0.18, cw = Math.cos(wob), sw = Math.sin(wob);
+    const swell = 1 + level * 0.35 + (mode === "speaking" ? energy * 0.12 : 0), spread = 1 + smooth(form * 1.6) * 1.8;
+    for (let k = 0; k < 3; k++) PB[k] = new Path2D();
+    for (let i = 0; i < NP; i++) {
+      const o = i * 3;
+      let tx, ty, tz;
+      if (sphere) {
+        const dx = SPH[o], dy = SPH[o + 1], dz = SPH[o + 2];
+        const n = 1 + 0.07 * Math.sin(dx * 4 + t * 2.1) * Math.cos(dy * 3 - t * 1.7) + (level + (mode === "speaking" ? energy * 0.2 : 0)) * 0.22 * Math.sin(dz * 6 + t * 7 + dx * 3);
+        tx = (dx * cr - dz * sr) * n * 0.82 * swell; ty = dy * n * 0.82 * swell; tz = (dx * sr + dz * cr) * n * 0.82;
+      } else {
+        const breathe = 1 + 0.04 * Math.sin(t * 1.6);
+        tx = (STAR[o] * cw - STAR[o + 2] * sw) * breathe; ty = STAR[o + 1] * breathe; tz = STAR[o] * sw + STAR[o + 2] * cw;
+      }
+      tx *= spread; ty *= spread;
+      const k = reduce ? 1 : PK[i];
+      PP[o] += (tx - PP[o]) * k; PP[o + 1] += (ty - PP[o + 1]) * k; PP[o + 2] += (tz - PP[o + 2]) * k;
+      const z = PP[o + 2], d = 2.6 / (2.6 + z), x = hub[0] + PP[o] * R * d, y = hub[1] + PP[o + 1] * R * d;
+      const b = z < -0.25 ? 2 : z < 0.3 ? 1 : 0, s = 0.9 + (2 - b) * 0.0 + (b === 2 ? 0.6 : b === 1 ? 0.3 : 0);
+      PB[b].rect(x - s / 2, y - s / 2, s, s);
+    }
+    const a = faceVis * fade * flick, c = fcol.map((v) => v | 0).join(",");
+    const g = f.createRadialGradient(hub[0], hub[1], 0, hub[0], hub[1], R * (sphere ? 1.1 : 0.55) * swell);
+    g.addColorStop(0, `rgba(${c},${(sphere ? 0.12 : 0.42) * a})`); g.addColorStop(1, `rgba(${c},0)`);
+    f.fillStyle = g; f.fillRect(hub[0] - R * 1.2 * swell, hub[1] - R * 1.2 * swell, R * 2.4 * swell, R * 2.4 * swell);
+    [0.32, 0.6, 0.95].forEach((al, k) => { f.fillStyle = `rgba(${c},${al * a})`; f.fill(PB[k]); });
+  }
+
   /* ================= FRAME ================= */
   function frame(now) {
     const dt = Math.min(now - last, 50) / 1000; last = now;
     if (box.offsetWidth === 0) { if (!reduce) requestAnimationFrame(frame); return; } // tab hidden
     const m = MODES[mode];
-    if (mode !== "idle") holdUntil = now + 5500;
-    const want = pinned || explore || mode !== "idle" || now < holdUntil ? 1 : 0;
+    if (mode === "thinking") holdUntil = now + 5500; else if (mode !== "idle") holdUntil = 0;
+    const want = pinned || explore || mode === "thinking" || now < holdUntil ? 1 : 0;   // the ship is for work; voice gets the face
     form = reduce ? want : form + (want - form) * (want ? 0.024 : 0.016);
     explode += ((explore ? 1.4 : m.e * smooth(form * 1.4 - 0.4)) - explode) * (reduce ? 1 : 0.045);
     zoom += (targetZoom - zoom) * (reduce ? 1 : 0.12);
@@ -266,11 +316,11 @@
     f.globalCompositeOperation = "source-over"; f.clearRect(0, 0, W, H);
     f.globalCompositeOperation = "lighter"; f.lineCap = "round"; f.lineJoin = "round";
     const hub = world(0, 0, 0), halo = f.createRadialGradient(hub[0], hub[1], 0, hub[0], hub[1], S * 1.9);
-    halo.addColorStop(0, `rgba(90,190,255,${(0.16 + 0.08 * energy) * flick})`); halo.addColorStop(0.5, `rgba(60,150,230,${0.05 * flick})`); halo.addColorStop(1, "rgba(60,150,230,0)");
+    halo.addColorStop(0, `rgba(90,190,255,${(0.16 + 0.08 * energy) * flick * smooth(form * 2.2)})`); halo.addColorStop(0.5, `rgba(60,150,230,${0.05 * flick})`); halo.addColorStop(1, "rgba(60,150,230,0)");
     f.fillStyle = halo; f.fillRect(hub[0] - S * 2, hub[1] - S * 2, S * 4, S * 4);
 
     // project and shade every panel
-    const eg = (0.78 + energy * 0.42) * flick * fade, scanY = CY + Math.sin(t * (0.8 + explode * 1.6)) * S * 1.3;
+    const shipVis = smooth(form * 2.2), eg = (0.78 + energy * 0.42) * flick * fade * shipVis, scanY = CY + Math.sin(t * (0.8 + explode * 1.6)) * S * 1.3;
     const Lx = -0.42, Ly = -0.62, Lz = -0.66;          // light from the upper left, toward the viewer
     for (let q = 0; q < NQ; q++) {
       const cx = QX[q]; FACE[q] = -9;
@@ -321,7 +371,7 @@
 
     // lit windows: small amber panes set into the panels that face the viewer
     if (WIN.length) {
-      const wa = Math.min(1, 0.85 + 0.3 * energy) * fade * flick;
+      const wa = Math.min(1, 0.85 + 0.3 * energy) * fade * flick * shipVis;
       f.fillStyle = `rgba(255,204,118,${wa})`; f.beginPath();
       const pane = (p, u0, u1, v0, v1) => {
         const bl = (u, v) => { const a = 1 - u, b = 1 - v; return [PX[p] * a * b + PX[p + 2] * u * b + PX[p + 4] * u * v + PX[p + 6] * a * v, PX[p + 1] * a * b + PX[p + 3] * u * b + PX[p + 5] * u * v + PX[p + 7] * a * v]; };
@@ -332,30 +382,8 @@
       f.fill(); WIN.length = 0;
     }
 
-    /* ---- the circular core: rings in the wheel's plane, strongest while at rest ---- */
-    const co = (1 - fe) * fade;
-    if (co > 0.02) {
-      const ring = (R, a0, a1, col, w, dash) => {
-        f.strokeStyle = col; f.lineWidth = w; f.setLineDash(dash || []); f.beginPath();
-        const n = Math.max(12, Math.ceil(((a1 - a0) / TAU) * 120));
-        for (let i = 0; i <= n; i++) { const a = a0 + ((a1 - a0) * i) / n, pp = world(-0.12, Math.cos(a) * R, Math.sin(a) * R); i ? f.lineTo(pp[0], pp[1]) : f.moveTo(pp[0], pp[1]); }
-        f.stroke(); f.setLineDash([]);
-      };
-      const tc = t * 0.25;
-      ring(1.2, 0, TAU, `rgba(150,222,255,${0.35 * co})`, 1);
-      ring(1.3, tc, tc + TAU, `rgba(150,222,255,${0.5 * co})`, 1, [1.5, 7]);
-      ring(1.38, -tc * 1.6, -tc * 1.6 + 0.9, `rgba(255,190,80,${0.85 * co})`, 2.2);
-      ring(1.38, -tc * 1.6 + Math.PI, -tc * 1.6 + Math.PI + 0.9, `rgba(255,190,80,${0.85 * co})`, 2.2);
-      ring(1.5, -tc * 0.5, -tc * 0.5 + TAU, `rgba(150,222,255,${0.18 * co})`, 1, [10, 14]);
-      for (let i = 0; i < 72; i++) {                   // tick marks round the rim
-        const a = (i / 72) * TAU + tc * 0.4, long = i % 6 === 0, a1 = world(-0.12, Math.cos(a) * 1.08, Math.sin(a) * 1.08), b1 = world(-0.12, Math.cos(a) * (long ? 1.16 : 1.12), Math.sin(a) * (long ? 1.16 : 1.12));
-        f.strokeStyle = i % 18 === 0 ? `rgba(255,190,80,${0.9 * co})` : `rgba(170,230,255,${(long ? 0.6 : 0.3) * co})`; f.lineWidth = long ? 1.4 : 1;
-        f.beginPath(); f.moveTo(a1[0], a1[1]); f.lineTo(b1[0], b1[1]); f.stroke();
-      }
-      const pulse = 1 + 0.06 * Math.sin(t * 2.2) + level * 0.3, cg = f.createRadialGradient(hub[0], hub[1], 0, hub[0], hub[1], S * 0.42 * pulse);
-      cg.addColorStop(0, `rgba(230,250,255,${0.55 * co})`); cg.addColorStop(0.35, `rgba(120,210,255,${0.28 * co})`); cg.addColorStop(1, "rgba(80,170,255,0)");
-      f.fillStyle = cg; f.beginPath(); f.arc(hub[0], hub[1], S * 0.42 * pulse, 0, TAU); f.fill();
-    }
+    /* ---- the face: a particle star at rest, a sphere while listening or speaking ---- */
+    face(now, hub, fe, fade);
 
     /* ---- orbits and working effects ---- */
     if (fe > 0.05) for (const [R, sp, k] of [[3.6, 0.16, 0], [4.6, -0.11, 2]]) {
@@ -371,7 +399,7 @@
       f.beginPath(); V.forEach((pp, i) => (i ? f.lineTo(pp[0], pp[1]) : f.moveTo(pp[0], pp[1]))); f.closePath();
       f.fillStyle = rgba(EDGE[2], 0.03 * a); f.fill(); f.strokeStyle = rgba(EDGE[2], 0.45 * a); f.lineWidth = 1; f.stroke();
     }
-    if (mode !== "idle" && !reduce) for (let k = 0; k < 7; k++) {   // data packets running up the spine
+    if (mode !== "idle" && !reduce && form > 0.4) for (let k = 0; k < 7; k++) {   // data packets running up the spine
       const x = ((t * 0.8 + k / 7) % 1) * Math.max(0.3, front); if (x > front) continue;
       const pp = world(x, 0, 0); f.fillStyle = rgba(EDGE[2], 0.95); f.fillRect(pp[0] - 1.5, pp[1] - 1.5, 3, 3);
     }

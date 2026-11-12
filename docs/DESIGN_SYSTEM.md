@@ -1,6 +1,32 @@
 # Design system
 
-## Flight Deck v2 · 2026-11-12 (current console)
+## Star system · 2026-11-12 (current)
+
+From Kunal's references in `C:\AI OFFICE\Context\` (Jarvis OS slides, a command-centre HUD, an agent
+events wall and a particle "face" video). Builds on Flight Deck v2 below.
+
+- **Brand:** the Envi star, a four-point sparkle in amber `#ffbc38`. Used for the logo (`.brand-star`),
+  the favicon, the Memory tab icon, every file star and the resting core.
+- **Sky (`web/stars.js`):** a page-wide canvas behind everything. Every vault file and agent
+  definition (`GET /api/memory`) is a named star, coloured by folder: Root warm white, Clients amber,
+  Envi cyan, Agents violet `#c6a6ff`. Placed by a hash of its path, so a file keeps its spot.
+  Files that link to each other (`[[wikilinks]]`, `.md` links) are joined by faint lines.
+  When Envi reads files for a reply, or Kunal picks one, its star flies to the centre with its name.
+- **Memory tab:** file list by folder with search, the open sky in the middle (clickable), and a
+  read-only preview with the file's links. Stars are laid out inside the middle area here.
+- **Face (`hologram.js`):** a particle figure in the stage. Rest: the Envi star. Listening: amber
+  sphere that swells with the mic level. Speaking: violet sphere rippling with each word. Working:
+  the particles stream out and the ship unfolds. The stage is now transparent over the sky.
+- **Console:** system rail (left: core, route tier, memory count, Supabase, files read for the last
+  reply), ship stage, events rail (right). Rails hide below 1200px. Chat stays full width below.
+- **Skills and tiers:** the quick row is now skills with a tier tag. T1 answers from files with no
+  model; skills that need a model (Plan today, Client update, Weekly review) show the tier of the
+  chosen model: T2 quick (small local model or Haiku), T3 real work (Sonnet, Opus, Codex, large local).
+  The route chip under the composer and every reply's footer show the tier. Display only; Envi does
+  not choose the model by itself.
+- **Panels:** `--plane` is translucent so the sky shows through; chat sits on a darker backing.
+
+## Flight Deck v2 · 2026-11-12
 
 Kunal asked for the ship to match his reference render, a circular resting state, a voice line,
 and the chat across the bottom. This replaces the console layout and ship notes in the section below.

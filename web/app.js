@@ -31,6 +31,10 @@
   let state = null, providers = [], choice = store.get("envi.model", { provider: "claude", model: "sonnet" });
   let turns = [], conversationId = null, ctl = null, voiceOut = store.get("envi.voice", false);
   const MODE_LABEL = { idle: "Standby", listening: "Listening", thinking: "Thinking", speaking: "Speaking" };
+  // The router display, after the "Jev" tiers: T1 answers from files with no model, T2 is a small
+// fast model, T3 is real work on a large model. Envi shows the tier of the model you chose.
+  const TIER = { 1: "Instant · no model", 2: "Quick answer", 3: "Real work" };
+  const tierOf = (provider, model) => (provider === "local" ? (/(^|[^0-9])(1|2|3|4|7|8)b|4b|mini|small/i.test(model) ? 2 : 3) : /haiku/i.test(model) ? 2 : 3);
   const setMode = (m) => { window.Holo?.setMode(m); $("#mode").textContent = MODE_LABEL[m]; emit("mode", m); };
 
   /* ---------- panels ---------- */
@@ -105,7 +109,7 @@
     }
 
     // telemetry + greeting
-    $("#tDb").textContent = s.db ? "Connected" : "Not set up"; $("#tDb").className = `v ${s.db ? "on" : "off"}`;
+    $("#tDb").textContent = s.db ? "Connected" : "Not set up"; $("#sysDb").textContent = s.db ? "Connected" : "Not set up"; $("#tDb").className = `v ${s.db ? "on" : "off"}`;
     $("#tVault").textContent = s.vaultFound ? "Found" : "Missing"; $("#tVault").className = `v ${s.vaultFound ? "on" : "off"}`;
     const h = istNow().getUTCHours();
     $("#greet").textContent = `${h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"}, Kunal.`;
@@ -171,7 +175,7 @@
     return { li, txt, meta: m };
   }
   function finishMeta(node, { provider, model, ms, text, question }) {
-    node.meta.replaceChildren(el("span", null, `${provider}/${model} · ${(ms / 1000).toFixed(1)}s`));
+    node.meta.replaceChildren(el("span", null, `T${tierOf(provider, model)} · ${provider}/${model} · ${(ms / 1000).toFixed(1)}s`));
     const save = el("button", null, "Save to Obsidian"); save.type = "button";
     save.addEventListener("click", async () => {
       save.disabled = true;
@@ -193,6 +197,9 @@
       button.setAttribute("aria-pressed", String(button.dataset.provider === p.id));
       button.disabled = !providers.find((item) => item.id === button.dataset.provider)?.models.length;
     });
+    const tr = tierOf(p.id, m.id), route = `Tier ${tr} · ${TIER[tr]} · ${p.label} ${m.label}`;
+    $("#routeChip").textContent = route; $("#sysTier").textContent = `T${tr} · ${p.label} ${m.label}`;
+    document.querySelectorAll(".quick .tier.tm").forEach((x) => { x.textContent = `T${tr}`; x.className = `tier tm t${tr}`; });
     store.set("envi.model", choice); emit("model");
   }
   function buildPop() {
@@ -345,7 +352,7 @@
           const ev = block.match(/^event: (.*)$/m)?.[1], data = block.split("\n").filter((l) => l.startsWith("data: ")).map((l) => l.slice(6)).join("\n");
           if (!ev || !data) continue;
           const d = JSON.parse(data);
-          if (ev === "meta") { conversationId = d.conversationId || conversationId; node.meta.textContent = `${d.provider}/${d.model} · thinking…`; }
+          if (ev === "meta") { conversationId = d.conversationId || conversationId; node.meta.textContent = `T${tierOf(d.provider, d.model)} · ${d.provider}/${d.model} · thinking…`; if (d.sources?.length) emit("sources", d.sources); }
           else if (ev === "thinking") node.meta.textContent = `${choice.provider}/${choice.model} · reasoning…`;
           else if (ev === "text") { emit("pulse", Math.min(1, 0.25 + (d.text.length - answer.length) / 60)); answer = d.text; node.txt.textContent = answer; log.scrollTop = log.scrollHeight; }
           else if (ev === "done") got = d;
@@ -373,8 +380,20 @@
   document.querySelectorAll("[data-local]").forEach((b) => b.addEventListener("click", () => {
     if (!state) return;
     const out = readout(b.dataset.local);
-    addMsg("u", QUICK[b.dataset.local]); addMsg("j", out, "instant · from your files");
+    addMsg("u", QUICK[b.dataset.local]); addMsg("j", out, "T1 · instant · from your files"); emit("event", { kind: "skill", text: `${QUICK[b.dataset.local]} (T1, no model)` });
     say(out);
+  }));
+
+  // Skills that need a model: a fixed, reviewed prompt sent to the model you chose.
+  const SKILLS = {
+    plan: { label: "Plan today", prompt: "Plan my day. From the open missions, client briefs and launch date, give me my top 3 for today, one line each on why, then what can wait. Keep it short." },
+    update: { label: "Client update", prompt: "Draft a short, friendly status update for each client with a brief, based on where their brief stands and what is still open. Plain language, ready to send after I check it." },
+    review: { label: "Weekly review", prompt: "Give me a weekly review: what moved (missions done, briefs), what is stuck, money against target, and the three things to fix next week. Be direct and use only the data you have." },
+  };
+  document.querySelectorAll("[data-skill]").forEach((b) => b.addEventListener("click", () => {
+    const k = SKILLS[b.dataset.skill]; if (!k || ctl) return;
+    emit("event", { kind: "skill", text: `${k.label} (T${tierOf(choice.provider, choice.model)}, ${choice.provider}/${choice.model})` });
+    send(k.prompt);
   }));
 
   /* ---------- tabs ---------- */

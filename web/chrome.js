@@ -18,6 +18,7 @@
     money: '<path d="M7 5h10M7 9h10M9 5c4 0 5 2 5 4s-1 4-5 4H7l7 7"/>',
     missions: '<path d="M10 6h10M10 12h10M10 18h10M4 6l1.2 1.2L7.5 5M4 12l1.2 1.2L7.5 11M4 18l1.2 1.2L7.5 17"/>',
     activity: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+    memory: '<path d="M12 2.5c.5 5.6 3.4 8.5 9 9-5.6.5-8.5 3.4-9 9-.5-5.6-3.4-8.5-9-9 5.6-.5 8.5-3.4 9-9z"/>',
     model: '<path d="M7 7h10v10H7z"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
     voice: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
     readout: '<path d="M4 5h16M4 10h10M4 15h16M4 20h8"/>',

@@ -5,6 +5,25 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Star system: files as stars, Memory tab, particle face, skills, tiers, events
+
+- **From:** Kunal's references in `C:\AI OFFICE\Context\` (15 images, 3 videos; frames reviewed with ffmpeg).
+  He chose: files as stars plus the star brand; skills, tier display, events feed and particle face.
+- **Server:** new read-only `server/memory.js`. `GET /api/memory` lists vault files and agent
+  definitions with their links; `GET /api/memory/file?id=` returns a preview (text files, first
+  6,000 characters). Paths are checked to stay inside the two roots; `../` escapes return 400.
+  The chat `meta` event now carries `sources`, the files `readContext()` reads.
+- **Page:** new `web/stars.js` (sky), `web/memory.js` (Memory tab, files read), `web/feed.js`
+  (events). `hologram.js`: transparent stage, particle face, ship only while working.
+  `app.js`: skills, tier display, sources event. `index.html`: brand star, Memory tab and view, rails.
+- **Fixed on the way:** the scheduled task restart left an orphaned Envi process on port 4777;
+  stopped it and restarted the task (worth a look: `Stop-ScheduledTask` does not stop the node child).
+- **Verified:** `npm run check` 7/7, voice-check, all scripts parse. Browser 1440x900 and 375x812,
+  no page scroll, Memory tab picks and previews files. Real chat on local qwen3.5:4b (19.0 s):
+  the ship unfolded, the 5 files read flew in and were listed, the feed logged it.
+- **Not verified:** real microphone on the listening sphere, spoken reply on the speaking sphere
+  (shown by forcing the modes), hover on stars with a mouse, frame rate on a slower PC.
+
 ## 2026-11-12 · Claude · Flight Deck v2: lit ship, circle core, voice line, chat at the bottom
 
 - **Changed:** `web/hologram.js` rebuilt. The ship is made of shaded, see-through panels with

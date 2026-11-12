@@ -11,6 +11,7 @@ import { readContext } from "./context.js";
 import { buildSystem } from "./persona.js";
 import * as store from "./db.js";
 import { logExchange, saveNote } from "./vault.js";
+import { listMemory, readMemoryFile, contextSources } from "./memory.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(here, "..", ".env"), quiet: true });
@@ -30,7 +31,7 @@ app.use("/api/*", async (c, next) => {
 
 app.onError((err, c) => {
   console.error("[envi]", err);
-  return c.json({ error: { code: err.code || "server_error", message: err.message } }, err.code === "not_found" ? 404 : 500);
+  return c.json({ error: { code: err.code || "server_error", message: err.message } }, err.code === "not_found" ? 404 : err.code === "bad_request" ? 400 : 500);
 });
 
 app.get("/api/health", (c) => c.json({ ok: true, db: store.dbReady(), time: new Date().toISOString() }));
@@ -54,6 +55,9 @@ app.patch("/api/missions/:id", async (c) => {
 });
 
 app.get("/api/stats", async (c) => c.json({ replies: await store.recentReplies() }));
+
+app.get("/api/memory", async (c) => c.json({ files: await listMemory() }));
+app.get("/api/memory/file", async (c) => c.json(await readMemoryFile(c.req.query("id"))));
 
 app.get("/api/conversations", async (c) => c.json({ conversations: await store.listConversations() }));
 app.get("/api/conversations/:id", async (c) => c.json({ messages: await store.getConversation(c.req.param("id")) }));
@@ -90,7 +94,8 @@ app.post("/api/chat", async (c) => {
     const started = Date.now();
     let conversationId = body.conversationId || null;
     try { conversationId = await store.ensureConversation(conversationId, question); } catch (e) { console.error("[envi] conversation:", e.message); }
-    await sse.writeSSE({ event: "meta", data: JSON.stringify({ provider, model, conversationId }) });
+    const sources = await contextSources().catch(() => []);
+    await sse.writeSSE({ event: "meta", data: JSON.stringify({ provider, model, conversationId, sources }) });
 
     let last = 0, pending = null;
     const onText = (text) => {
