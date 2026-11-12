@@ -60,3 +60,14 @@ export async function speak(text, { voice } = {}) {
   }, 120000);
   return Buffer.from(await r.arrayBuffer());
 }
+
+// Warm-up: after Envi starts, wait for Voice Studio (it may still be booting) and load the engine, so the
+// first spoken reply is not held up by the one-minute first load. Quiet; gives up after about 10 minutes.
+export function warmUp() {
+  let tries = 0;
+  const go = async () => {
+    try { await ready(); console.log("[envi] local voice ready"); return; } catch (e) { if (e.code !== "voice_unavailable") console.error("[envi] voice warm-up:", e.message); }
+    if (++tries < 20) setTimeout(go, 30_000);
+  };
+  setTimeout(go, 5_000);
+}

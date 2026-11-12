@@ -5,6 +5,15 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Voice Studio starts at sign-in; Envi warms the voice up
+
+- **Changed:** `scripts/install-voice-service.ps1` registers the Windows task "Lanuk Voice Studio" (at sign-in, restarts on
+  failure, hidden console, log `C:\AI TOOLSoice-studio-run.log`). `server/tts.js` `warmUp()`: about 5 s after Envi starts it
+  waits for Voice Studio and loads Kokoro (checks every 30 s, up to 10 minutes).
+- **Verified:** task Running; Voice Studio answered health under the task (`cuda`, loaded); after restarting Envi the log printed
+  "local voice ready"; `/api/speak` returned a spoken sentence in 1.6 s; ports 4777 and 8880 each held by one process; smoke test 7/7.
+- **Not verified:** a real Windows restart or sign-in; behaviour when Voice Studio is slower than 10 minutes to start.
+
 ## 2026-11-12 · Claude · Envi speaks with the local voice (Voice Studio)
 
 - **Asked:** connect Envi's spoken replies to the voice tool installed today (`C:\AI TOOLSoice-studio`).

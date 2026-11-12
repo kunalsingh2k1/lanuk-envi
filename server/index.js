@@ -174,4 +174,5 @@ app.get("*", serveStatic({ path: path.join(WEB, "index.html") }));
 
 serve({ fetch: app.fetch, port: PORT, hostname: HOST }, () => {
   console.log(`[envi] listening on http://${HOST}:${PORT}  (supabase: ${store.dbReady() ? "on" : "off - add the key to .env"})`);
+  tts.warmUp();
 });
