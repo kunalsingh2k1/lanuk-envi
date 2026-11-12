@@ -173,26 +173,21 @@ body::before, body::after, .sky::before, .sky::after { display: none; }
 .tele li { font-size: 10px; }
 .tele li:nth-child(-n+4) { display: none; }
 .tele .v { color: var(--ice); }
-.notch { position: absolute; width: 46%; max-width: 660px; top: 12px; left: 53%; }
-.notch .notch-slab, .notch.busy .notch-slab, .notch.open .notch-slab { transform: none; background: transparent; border-radius: 0; box-shadow: none; }
-.notch::after, .notch-slab::before, .notch-slab::after, .notch-handle, .notch-status { display: none; }
-.notch .tabs { height: 54px; padding: 0; gap: 12px; }
-.notch .tabs button { flex-direction: row; font-size: 12px; letter-spacing: .14em; clip-path: none; background: none; border-radius: 0; border-bottom: 2px solid transparent; color: var(--ice-dim); }
-.notch .tabs button svg, .notch .tabs .badge { display: none; }
-.notch .tabs button[aria-selected="true"] { background: none; color: var(--holo); border-bottom: 2px solid var(--holo); }
 .views { max-width: none; padding: 22px 0 0; }
 .v-console { position: relative; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0; padding-bottom: 110px; overflow: visible; }
 .v-console .core { display: flex; justify-content: stretch; position: static; grid-column: auto; order: 0; }
 .v-console .holo { display: block; width: 100%; aspect-ratio: auto; max-width: none; height: 100%; position: static; }
 .v-console .dial { width: 100%; height: 100%; aspect-ratio: auto; margin: 0; }
-.ship-art { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--void); }
-.dial canvas, .dial .hud, .dial .holo-mode { display: none; }
+.dial canvas { display: block; }
+.dial .hud, .dial .holo-mode { display: flex; }
 .dial::after { display: none; }
-.dial.inspecting .ship-art { display: none; }
-.dial.inspecting canvas { display: block; }
-.dial.inspecting .hud, .dial.inspecting .holo-mode { display: flex; }
-.inspect-ship { position: absolute; bottom: 16px; left: 20px; border: 1px solid var(--edge); color: var(--ice); background: var(--plane); padding: 8px 14px; font: 11px var(--mono); cursor: pointer; z-index: 2; }
-.inspect-ship:hover, .inspect-ship[aria-pressed="true"] { color: var(--holo); border-color: var(--holo); }
+.ship-controls { position: absolute; bottom: 14px; left: 16px; right: 16px; display: flex; gap: 6px; justify-content: center; z-index: 2; }
+.ship-controls button { border: 1px solid var(--edge); border-radius: 8px; color: var(--ice); background: var(--plane); padding: 8px 12px; font: 10px var(--mono); cursor: pointer; transition: background .2s, border-color .2s; }
+.ship-controls button:hover, .ship-controls button[aria-pressed="true"] { color: var(--holo); border-color: var(--holo); }
+.dial .hud-bl { bottom: 58px; left: 18px; font-size: 9px; }
+.dial .hud-tl { top: 18px; left: 18px; }
+.dial .hud-tr { top: 18px; right: 18px; }
+.dial .holo-mode { bottom: 82px; opacity: .7; }
 .v-console .callouts { position: absolute; top: auto; right: auto; bottom: 0; left: 0; width: 100%; height: 84px; margin: 0; padding: 16px 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-block: 1px solid var(--edge); gap: 0; }
 .callout { padding: 0 24px; border-left: 1px solid var(--edge); }
 .callout:first-child { padding-left: 12px; border-left: 3px solid var(--holo); }
@@ -232,7 +227,6 @@ body::before, body::after, .sky::before, .sky::after { display: none; }
 .link-btn { color: var(--ice-dim); font-size: 10px; }
 .switch-pop { width: min(390px, calc(100vw - 40px)); max-height: min(430px,55dvh); background: var(--deep); z-index: 80; }
 .opt[aria-selected="true"] { background: var(--holo-soft); }
-.dock { display: none; }
 :focus-visible { outline: 2px solid var(--holo); outline-offset: 3px; }
 @media (max-width: 1300px) {
   .cmd .switch { grid-column: 1 / -1; width: 150px; }
@@ -243,7 +237,6 @@ body::before, body::after, .sky::before, .sky::after { display: none; }
 @media (max-width: 1100px) {
   body { padding: 0 20px 16px; }
   .mark-sub { display: none; }
-  .notch { width: 60%; left: 52%; }
   .v-console { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); }
   .provider-row { gap: 6px; }
   .provider-row button { padding: 9px 10px; }
@@ -254,18 +247,16 @@ body::before, body::after, .sky::before, .sky::after { display: none; }
   body { padding: 0 14px 10px; }
   .telemetry { min-height: 55px; padding: 14px 0; }
   .mark-name { font-size: 22px; }
-  .notch { position: static; transform: none; width: 100%; max-width: none; flex: none; }
-  .notch .tabs { height: 45px; gap: 4px; }
-  .notch .tabs button { font-size: 10px; letter-spacing: .04em; }
   .views { padding-top: 10px; }
   .v-console { grid-template-columns: minmax(0,1fr); grid-template-rows: 22dvh minmax(0,1fr); padding-bottom: 0; gap: 10px; }
   .v-console .core { display: block; }
-  .ship-art { object-fit: cover; object-position: center 45%; }
   .v-console .callouts { position: absolute; top: 0; bottom: auto; right: 0; left: auto; height: 22dvh; width: 42%; background: var(--plane); grid-template-columns: 1fr 1fr; padding: 10px; border: 0; gap: 10px; }
   .callout, .callout:first-child { padding: 0; border: 0; }
   .callout dt { font-size: 8px; }
   .callout dd, .callout.hot dd { font-size: 10px; white-space: normal; }
-  .inspect-ship { bottom: 8px; left: 8px; padding: 6px 8px; font-size: 9px; }
+  .ship-controls { bottom: 4px; left: 0; right: auto; gap: 3px; }
+  .ship-controls button { font-size: 8px; padding: 5px; }
+  .dial .hud, .dial .holo-mode { display: none; }
   .v-console .console { padding: 0; border-left: 0; gap: 8px; }
   .console-heading { display: none; }
   .conversation-title { font-size: 18px; padding: 4px 0 10px; }
@@ -282,3 +273,92 @@ body::before, body::after, .sky::before, .sky::after { display: none; }
   .v-console .callouts { height: 15dvh; }
   .conversation-title { display: none; }
 }
+
+/* Rounded edge chrome is deliberately separate from the console's cut corners. */
+.notch .tabs button, .notch .badge, .fan-item, .dock-pop button, .dock-gear {
+  clip-path: none; background-image: none; border-radius: 12px;
+}
+.notch .tabs button[aria-selected="true"] { background: var(--holo-soft); color: var(--holo); }
+.notch .tabs .badge { border-radius: 6px; }
+.dock-gear { border-radius: 50%; }
+.fan-item { background-color: var(--deep); border-color: var(--edge); }
+.fan-item.hi, .fan-item:hover, .fan-item:focus-visible { background: var(--holo-soft); border-color: var(--holo); }
+.dock-pop button[aria-checked="true"] { background: var(--holo-soft); color: var(--holo); }
+.dock-pop button[aria-checked="true"] small { color: var(--ice-dim); }
+.voice-control { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.voice-toggle { border: 1px solid var(--edge); border-radius: 18px; padding: 8px 13px; background: transparent; color: var(--ice); font: 11px var(--mono); cursor: pointer; }
+.voice-toggle[aria-pressed="true"] { color: var(--holo); border-color: var(--holo); background: var(--holo-soft); }
+.voice-toggle:disabled { cursor: not-allowed; opacity: .6; }
+.voice-status { font: 10px var(--mono); color: var(--ice-dim); max-width: 190px; }
+@media (min-width: 861px) { .views { padding-right: 66px; } .telemetry { padding-right: 66px; } }
+@media (max-width: 860px) {
+  .telemetry { min-height: 76px; padding-top: 24px; gap: 8px; }
+  .voice-status, .tele { display: none; }
+  .voice-toggle { font-size: 10px; padding: 7px 10px; }
+  .notch { width: min(540px,calc(100vw - 44px)); }
+  .v-console { grid-template-rows: 30dvh minmax(0,1fr); }
+  .v-console .dial { height: calc(100% - 46px); }
+  .v-console .callouts { top: calc(30dvh - 42px); left: 0; right: 0; width: 100%; height: 42px; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 4px; gap: 8px; }
+  .ship-controls { left: 0; right: 0; justify-content: center; }
+}
+
+/* ===== Flight Deck v2 (2026-11-12): ship across the top, deck strip with the voice line,
+   chat across the full width below. Overrides the console rules above. ===== */
+.v-console { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 56fr) minmax(0, 44fr); gap: 14px; padding-bottom: 0; overflow: hidden; }
+.v-console .core { display: flex; min-height: 0; }
+.v-console .holo { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; }
+.v-console .dial { flex: 1; min-height: 0; height: auto; width: 100%; overflow: hidden; border-radius: 4px; }
+.deck-strip { flex: none; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); height: 74px; border-block: 1px solid var(--edge); }
+.v-console .callouts { position: static; inset: auto; width: auto; height: auto; padding: 14px 0; border: 0; background: none; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.voice-line { position: relative; min-width: 0; border-left: 1px solid var(--edge); }
+.voice-line canvas { position: absolute; inset: 6px 0 4px 16px; width: calc(100% - 16px); height: calc(100% - 10px); display: block; }
+.voice-tag { position: absolute; left: 16px; top: 8px; z-index: 1; font: 500 9.5px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--ice-dim); }
+.voice-line:not([data-mode="idle"]):is([data-mode]) .voice-tag { color: var(--holo); }
+
+/* chat: one wide panel; title and instant read-outs on top, log, then one composer row */
+.v-console .console {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "title quick" "log log" "cmd cmd" "foot foot";
+  gap: 10px 16px; padding: 0; border: 0; background: none; min-height: 0; overflow: visible;
+}
+.v-console .console-heading { display: none; }
+.v-console .conversation-title { grid-area: title; align-self: center; border: 0; padding: 0; font-size: clamp(17px, 1.4vw, 22px); }
+.v-console .quick { grid-area: quick; align-self: center; flex-wrap: nowrap; }
+.v-console .log { grid-area: log; min-height: 0; max-height: none; border-block: 1px solid var(--edge); padding-right: 10px; }
+.v-console .msg { padding: 12px 0; grid-template-columns: 72px minmax(0, 1fr); }
+.v-console .msg .txt { max-width: 120ch; }
+.v-console .cmd { grid-area: cmd; grid-template-columns: auto 150px minmax(0, 1fr) 44px 92px; gap: 8px; align-items: stretch; }
+.v-console .provider-row { grid-column: auto; padding: 0; gap: 6px; }
+.v-console .provider-row > span { margin-right: 4px; white-space: nowrap; }
+.v-console .cmd .switch { grid-column: auto; width: auto; }
+.v-console .cmd textarea { grid-column: auto; min-height: 50px; }
+.v-console .cmd-foot { grid-area: foot; }
+
+@media (max-width: 1100px) {
+  .v-console .cmd { grid-template-columns: minmax(0, 1fr) 40px 76px; }
+  .v-console .provider-row { grid-column: 1 / -1; }
+  .v-console .cmd .switch { grid-column: 1 / -1; width: 180px; }
+  .v-console .cmd textarea { grid-column: 1; }
+}
+@media (max-width: 860px) {
+  .v-console { grid-template-rows: minmax(0, 46fr) minmax(0, 54fr); gap: 8px; }
+  .v-console .dial { height: auto; }
+  .deck-strip { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 26px; height: auto; }
+  .v-console .callouts { position: static; top: auto; left: auto; right: auto; width: auto; height: auto; padding: 6px 0; gap: 6px; background: none; }
+  .voice-line { border-left: 0; border-top: 1px solid var(--line); }
+  .voice-line canvas { inset: 2px 0 2px 70px; width: calc(100% - 70px); height: calc(100% - 4px); }
+  .voice-tag { left: 0; top: 7px; }
+  .ship-controls { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; left: 6px; right: 6px; bottom: 6px; }
+  .ship-controls button { flex: none; }
+  .v-console .console { grid-template-columns: minmax(0, 1fr); grid-template-areas: "quick" "log" "cmd" "foot"; gap: 6px; }
+  .v-console .conversation-title { display: none; }
+  .v-console .quick { overflow-x: auto; scrollbar-width: none; }
+  .v-console .cmd { grid-template-columns: 96px minmax(0, 1fr) 36px 58px; gap: 5px; }
+  .v-console .provider-row { grid-column: 1 / -1; }
+  .v-console .cmd .switch { grid-column: 1; width: auto; }
+  .v-console .cmd textarea { grid-column: 2; min-height: 44px; }
+  .v-console .msg { grid-template-columns: 48px minmax(0, 1fr); padding: 8px 0; }
+}
+.v-console .callout dd, .v-console .callout.hot dd { font-size: clamp(13px, 1.15vw, 19px); }
+.v-console .callout { padding: 0 16px; }
+@media (max-width: 860px) { .v-console .callout dd, .v-console .callout.hot dd { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }

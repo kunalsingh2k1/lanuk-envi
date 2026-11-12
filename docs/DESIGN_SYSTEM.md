@@ -1,5 +1,27 @@
 # Design system
 
+## Flight Deck v2 · 2026-11-12 (current console)
+
+Kunal asked for the ship to match his reference render, a circular resting state, a voice line,
+and the chat across the bottom. This replaces the console layout and ship notes in the section below.
+
+- **Layout:** console is three rows. The ship stage spans the full width on top, then the deck strip
+  (four key numbers on the left, the voice line on the right), then the chat across the full width.
+  Chat: title and instant read-outs on one line, the log, then one composer row
+  (provider buttons, model menu, message box, mic, Send). Rules: last section of `web/holo.css`.
+- **Ship (`web/hologram.js`):** made of lit, see-through panels, not lines. Panels that face the
+  viewer at a glancing angle glow brightest; a blurred quarter-size copy is added underneath for
+  bloom; amber window panes sit on panels that face the viewer. Pose follows the reference: wheel
+  near and almost face-on at the left, hull running away to the lower right. The static
+  `assets/flight-deck.png` artwork is no longer shown (file kept).
+- **Circle core:** at rest the ship shows as its main wheel seen face-on, with ticks, amber arcs
+  and a glowing hub. When a chat starts or the mic opens, the camera swings round and the hull
+  extends out of the wheel (about 2 s). About 5.5 s after Envi goes idle it folds back.
+  "Show ship" pins the ship open. Reduced motion jumps between the two without animating.
+- **Voice line (`web/voiceline.js`):** an amber wave in the deck strip. Hidden at rest. Follows
+  the microphone level while listening (measured in the browser, never sent), the streamed
+  text while a reply arrives, and each spoken word while Envi reads aloud.
+
 ## Flight Deck revision · 2026-11-12
 
 Kunal selected visual concept 2 in Codex. The final section of `web/holo.css` now owns

@@ -5,6 +5,23 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Flight Deck v2: lit ship, circle core, voice line, chat at the bottom
+
+- **Changed:** `web/hologram.js` rebuilt. The ship is made of shaded, see-through panels with
+  bloom and amber windows, posed like Kunal's reference render. At rest it shows a circular core
+  (the wheel face-on). It unfolds into the ship when a chat starts or the mic opens, and folds
+  back about 5.5 s after Envi is idle. New "Show ship" button. New `web/voiceline.js`: an
+  amber wave in the deck strip, driven by the mic level, streamed text and spoken words. `app.js`
+  sends `envi:pulse` events. Console layout: ship on top, deck strip, chat across the full width.
+- **Also in this commit:** uncommitted work found in the tree from another agent (after `5f21631`):
+  the header voice switch and status, voice error handling, `scripts/voice-check.js`, notch
+  focus handling, touch long-press for the radial menu, zoom/motion/layers ship controls. Kept as found.
+- **Verified:** `npm run check` 7/7; `node scripts/voice-check.js` passes; desktop 1440x900 and
+  phone 375x812 with no page scroll. A real chat on local qwen3.5:4b ("Voice line check passed.",
+  35.6 s) unfolded the ship, raised the voice line, and the ship folded back to the circle afterwards.
+- **Not verified:** a real microphone driving the voice line, mouse drag and wheel zoom by hand,
+  frame rate on a slower machine, Safari.
+
 ## 2026-11-12 · Codex · Flight Deck interface (selected design 2)
 
 - **Changed:** amber/white desktop layout, generated orbital spacecraft art, visible navigation,

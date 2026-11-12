@@ -21,7 +21,7 @@ and phone layouts verified. Details and limitations: `../design-qa.md` and `LOG.
 | Windows scheduled task "Lanuk Envi" (starts at sign-in, restarts) | Verified running 2026-11-11 | `Get-ScheduledTask` |
 | Private GitHub repo `kunalsingh2k1/lanuk-envi` | Verified 2026-11-12 | `git status` clean against `origin/main` |
 | Interface: 5 tabs on one fixed screen, top notch, radial menu, stats dock | Verified in browser 2026-11-12 | Desktop 1440x900, phone 375x812, scripted events |
-| 3D station hologram, layers open while a reply is produced | Verified in browser 2026-11-12 | Triggered from code, not from a real chat |
+| Flight Deck v2: lit 3D ship after the reference, circle core that unfolds into the ship, voice line, chat across the bottom | Verified in browser 2026-11-12 | 1440x900 and 375x812, no page scroll; real local-model chat unfolded the ship, moved the voice line, folded back after the reply |
 | "Hi Envi" wake phrase | Built; phrase matching tested on 12 samples | No real microphone test |
 | Smoke test `npm run check` | Verified 2026-11-12 | `server/selftest.js` |
 
@@ -34,7 +34,7 @@ and phone layouts verified. Details and limitations: `../design-qa.md` and `LOG.
 | Obsidian app | Not installed on this PC (2026-11-11). `LANUK OFFICE` is a plain folder until it is opened as a vault. |
 | Auto model choice | `pickModel()` in `server/providers/index.js` is a placeholder left for Kunal. Not offered in the model menu. |
 | Recovery after reboot | The task starts at sign-in, not at power-on. Not tested across a restart. |
-| Real-input tests | Notch hover with a mouse, long-press, drag on the station, microphone, Save to Obsidian click. |
+| Real-input tests | Notch hover with a mouse, long-press, drag on the ship, microphone (voice line level), Save to Obsidian click. |
 | Automated tests | Only the smoke test. No unit tests, no browser tests. |
 
 ## Known rough edges

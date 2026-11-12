@@ -219,12 +219,6 @@
     if (choice.provider !== provider.id) choice = { provider: provider.id, model: provider.models[0].id };
     paintChoice();
   }));
-  $("#inspectShip").addEventListener("click", () => {
-    const inspecting = $("#holoBox").classList.toggle("inspecting");
-    $("#inspectShip").setAttribute("aria-pressed", String(inspecting));
-    $("#inspectShip").textContent = inspecting ? "Close 3D" : "Inspect 3D";
-    if (inspecting) window.dispatchEvent(new Event("resize"));
-  });
   document.addEventListener("click", (e) => { if (!pop.hidden && !e.target.closest(".switch")) togglePop(false); });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !pop.hidden) { togglePop(false); sbtn.focus(); }
@@ -248,13 +242,24 @@
     if (v) u.voice = v;
     u.rate = 1.03;
     u.onstart = () => { setMode("speaking"); $("#stopBtn").hidden = false; };
+    u.onboundary = () => emit("pulse", 0.7);   // each spoken word moves the voice line
     u.onend = u.onerror = () => { if (window.Holo?.mode === "speaking") setMode("idle"); if (!ctl) $("#stopBtn").hidden = true; };
     synth.speak(u);
   }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR) {
     const mic = $("#micBtn"), input = $("#input"), wakeBtn = $("#wakeBtn"); mic.hidden = false; wakeBtn.hidden = false;
-    let rec = null, base = "", wakeOn = store.get("envi.wake", false), wakeRec = null, wakeBlocked = false;
+    let rec = null, base = "", wakeOn = false, wakeRec = null, wakeBlocked = false;
+    const voiceStatus = $("#voiceStatus");
+    const reportVoice = (text) => { voiceStatus.textContent = text; };
+    const voiceError = (error) => {
+      wakeBlocked = true; wakeOn = false; stopWake(); paintWake();
+      const message = error === "not-allowed" || error === "service-not-allowed"
+        ? "Allow microphone access, then enable voice again."
+        : error === "audio-capture" ? "No microphone found. Connect one and retry."
+        : "Voice service unavailable. Try again or type your message.";
+      reportVoice(message); $("#hint").textContent = message;
+    };
 
     // Speech engines write "Envi" many ways. Returns the words after the wake phrase, or null.
     const WAKE = /\b(?:hi|hey|hai|hello|high)[\s,]+(?:envi|envy|n\.?\s?v\.?|en\s?v(?:ee|i|y)?|anvi|envie|enby|and\s?v)\b[\s,.!?]*/i;
@@ -263,12 +268,13 @@
     function listen(prefill = "") {
       if (rec) return;
       stopWake();
+      let failed = false, heard = !!prefill;
       rec = new SR(); rec.lang = "en-IN"; rec.interimResults = true; rec.continuous = false; base = prefill ? prefill + " " : (input.value ? input.value + " " : "");
-      rec.onstart = () => { mic.classList.add("live"); mic.setAttribute("aria-label", "Stop listening"); setMode("listening"); };
-      rec.onresult = (e) => { input.value = base + [...e.results].map((r) => r[0].transcript).join(""); grow(); };
-      rec.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { mic.hidden = true; wakeBtn.hidden = true; wakeBlocked = true; $("#hint").textContent = "Microphone is blocked for this page. Typing works."; } };
-      rec.onend = () => { mic.classList.remove("live"); mic.setAttribute("aria-label", "Speak"); rec = null; if (window.Holo?.mode === "listening") setMode("idle"); if (input.value.trim() && !ctl) send(input.value.trim()); startWake(); };
-      rec.start();
+      rec.onstart = () => { mic.classList.add("live"); mic.setAttribute("aria-label", "Stop listening"); setMode("listening"); reportVoice("Listening to your request…"); };
+      rec.onresult = (e) => { heard = true; input.value = base + [...e.results].map((r) => r[0].transcript).join(""); grow(); };
+      rec.onerror = (e) => { failed = true; if (e.error !== "aborted" && e.error !== "no-speech") voiceError(e.error); else reportVoice("No request captured. Try again."); };
+      rec.onend = () => { mic.classList.remove("live"); mic.setAttribute("aria-label", "Speak"); rec = null; if (window.Holo?.mode === "listening") setMode("idle"); if (!failed && heard && input.value.trim() && !ctl) send(input.value.trim()); startWake(); };
+      try { rec.start(); } catch { rec = null; voiceError("start-failed"); }
     }
     mic.addEventListener("click", () => { if (rec) rec.stop(); else listen(); });
 
@@ -277,29 +283,33 @@
     function startWake() {
       if (!wakeOn || wakeBlocked || wakeRec || rec || document.hidden) return;
       const w = new SR(); w.lang = "en-IN"; w.interimResults = true; w.continuous = true;
+      w.onstart = () => reportVoice('Listening for “Hi Envi”');
       w.onresult = (e) => {
         if (ctl || synth?.speaking) return;                 // don't let Envi's own voice wake it
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const rest = afterWake(e.results[i][0].transcript);
           if (rest === null) continue;
-          if (!e.results[i].isFinal && rest === "") continue; // wait to see if a command follows
+          if (!e.results[i].isFinal) continue; // don't restart halfway through the command
           stopWake();
-          if (rest && e.results[i].isFinal) { addMsg("u", rest); input.value = ""; sendHeard(rest); }
+          if (rest) { input.value = ""; send(rest).finally(startWake); }
           else listen(rest);
           return;
         }
       };
-      w.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { wakeBlocked = true; wakeOn = false; paintWake(); $("#hint").textContent = "Allow the microphone for this page to use “Hi Envi”."; } };
+      w.onerror = (e) => { if (e.error !== "aborted" && e.error !== "no-speech") voiceError(e.error); };
       w.onend = () => { if (wakeRec === w) { wakeRec = null; setTimeout(startWake, 400); } }; // browsers end it every minute or so
       wakeRec = w;
-      try { w.start(); } catch { wakeRec = null; }
+      try { w.start(); } catch { wakeRec = null; voiceError("start-failed"); }
     }
-    const sendHeard = (text) => { log.lastElementChild?.remove(); send(text).finally(startWake); };
-    function paintWake() { wakeBtn.setAttribute("aria-pressed", String(wakeOn)); wakeBtn.textContent = wakeOn ? "“Hi Envi” on" : "“Hi Envi” off"; window.Envi.wake = wakeOn; emit("wake", wakeOn); }
-    wakeBtn.addEventListener("click", () => { wakeOn = !wakeOn; wakeBlocked = false; store.set("envi.wake", wakeOn); paintWake(); if (wakeOn) startWake(); else stopWake(); });
-    document.addEventListener("visibilitychange", () => { if (document.hidden) stopWake(); else startWake(); });
+    function paintWake() { wakeBtn.setAttribute("aria-pressed", String(wakeOn)); wakeBtn.textContent = wakeOn ? "Voice active · Hi Envi" : "Enable voice"; window.Envi.wake = wakeOn; emit("wake", wakeOn); }
+    wakeBtn.addEventListener("click", () => { wakeOn = !wakeOn; wakeBlocked = false; paintWake(); if (wakeOn) { reportVoice("Starting microphone…"); startWake(); } else { stopWake(); rec?.abort(); reportVoice("Voice activation is off"); } });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) { stopWake(); if (wakeOn) reportVoice("Voice paused while page is hidden"); } else startWake(); });
     paintWake(); startWake();
     window.__enviWake = afterWake; // for tests
+  } else {
+    $("#wakeBtn").disabled = true;
+    $("#voiceStatus").textContent = "Voice recognition is unavailable in this browser.";
+    $("#wakeBtn").title = "Use a browser with speech recognition, or type your message.";
   }
 
   /* ---------- chat ---------- */
@@ -337,7 +347,7 @@
           const d = JSON.parse(data);
           if (ev === "meta") { conversationId = d.conversationId || conversationId; node.meta.textContent = `${d.provider}/${d.model} · thinking…`; }
           else if (ev === "thinking") node.meta.textContent = `${choice.provider}/${choice.model} · reasoning…`;
-          else if (ev === "text") { answer = d.text; node.txt.textContent = answer; log.scrollTop = log.scrollHeight; }
+          else if (ev === "text") { emit("pulse", Math.min(1, 0.25 + (d.text.length - answer.length) / 60)); answer = d.text; node.txt.textContent = answer; log.scrollTop = log.scrollHeight; }
           else if (ev === "done") got = d;
           else if (ev === "error") throw Object.assign(new Error(d.message), { code: d.code });
         }

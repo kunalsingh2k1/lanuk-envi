@@ -1,7 +1,11 @@
-// The Envi station: a wireframe ring station drawn as a hologram. Real 3D points, projected
-// each frame. Drag to turn it; arrow keys work when it has focus. When Envi starts working
-// the station pulls apart along its spine, scan layers sweep through it and colour-split
-// ghost copies appear, then it closes up again when the reply is done.
+// The Envi ship, drawn as a lit hologram. The hull, wheels and arrays are made of panels with
+// real surface normals. Each panel is shaded by how much it faces the viewer (glancing panels
+// glow brightest) and the whole ship gets a soft bloom, so it reads as a solid glass vessel.
+//
+// At rest Envi shows a circular core: the ship's main wheel seen face-on, with the hull hidden
+// and rings turning round it. When a chat starts or Kunal starts talking, the camera swings
+// round and the hull extends out of the wheel into the full ship. A few seconds after Envi
+// finishes it folds back into the circle. Drag to turn it, scroll or +/- to zoom.
 (() => {
   "use strict";
   const cv = document.getElementById("holo");
@@ -9,227 +13,429 @@
   const ctx = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const TAU = Math.PI * 2;
+  const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
+  const smooth = (v) => { v = clamp(v); return v * v * (3 - 2 * v); };
+  const lerp = (a, b, f) => a + (b - a) * f;
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; // fixed, so every load looks the same
 
-  /* ---------- model ---------- */
-  // Each group can spin about the ship's long axis (X) and slides along it when exploded.
+  /* ================= MODEL ================= */
+  // Units: the main wheel has radius 1 at x = 0; the bow points along +x.
+  // A group can spin about the long axis and slides along it when the ship pulls apart.
   const GROUPS = [
-    { spin: 0,     off: -0.42 },  // 0 engine block
-    { spin: 0.55,  off: -0.24 },  // 1 wheel A
-    { spin: -0.42, off: -0.08 },  // 2 wheel B
-    { spin: 0,     off: 0.00 },   // 3 spine
-    { spin: 0,     off: 0.12 },   // 4 habitat modules
-    { spin: 1.3,   off: 0.26 },   // 5 small ring
-    { spin: 0,     off: 0.40 },   // 6 solar arrays
-    { spin: 0,     off: 0.56 },   // 7 nose and antenna
+    { spin: 0,     off: -0.55 },  // 0 stern: engine bell and boom
+    { spin: 0.12,  off: -0.30 },  // 1 main wheel, inner ring, spokes
+    { spin: 0,     off: -0.12 },  // 2 hub drum
+    { spin: 0,     off: 0.04 },   // 3 hull A
+    { spin: 0,     off: 0.20 },   // 4 hull B
+    { spin: -0.22, off: 0.36 },   // 5 mid ring
+    { spin: 0,     off: 0.52 },   // 6 hull C
+    { spin: 0,     off: 0.70 },   // 7 nose
+    { spin: 0.12,  off: -0.30 },  // 8 the four long arrays (turn with the wheel, fold in to make the core)
   ];
-  const SEG = []; // [ax,ay,az, bx,by,bz, group, weight, tint]   tint: 0 ice, 1 lime, 2 amber
-  const line = (g, a, b, w = 1, k = 0) => SEG.push([a[0], a[1], a[2], b[0], b[1], b[2], g, w, k]);
-  const ring = (g, x, R, n, w = 1, k = 0, a0 = 0, a1 = TAU) => {
-    for (let i = 0; i < n; i++) {
-      const p = a0 + ((a1 - a0) * i) / n, q = a0 + ((a1 - a0) * (i + 1)) / n;
-      line(g, [x, Math.cos(p) * R, Math.sin(p) * R], [x, Math.cos(q) * R, Math.sin(q) * R], w, k);
-    }
-  };
-  const tube = (g, x0, x1, r0, r1, hoops, longs, w = 0.8, k = 0) => {
-    for (let i = 0; i <= hoops; i++) { const f = i / hoops; ring(g, x0 + (x1 - x0) * f, r0 + (r1 - r0) * f, 10, w * 0.8, k); }
-    for (let j = 0; j < longs; j++) { const a = (j / longs) * TAU; line(g, [x0, Math.cos(a) * r0, Math.sin(a) * r0], [x1, Math.cos(a) * r1, Math.sin(a) * r1], w, k); }
-  };
-  const wheel = (g, x, R, r, spokes, k) => {
-    ring(g, x, R + r, 56, 1, k); ring(g, x, R - r, 56, 0.9, 0); ring(g, x - r, R, 56, 0.6, 0); ring(g, x + r, R, 56, 0.6, 0);
-    for (let i = 0; i < 28; i++) {               // cross hoops round the tube
-      const a = (i / 28) * TAU, c = Math.cos(a), s = Math.sin(a);
-      const P = [[x, c * (R + r), s * (R + r)], [x + r, c * R, s * R], [x, c * (R - r), s * (R - r)], [x - r, c * R, s * R]];
-      for (let j = 0; j < 4; j++) line(g, P[j], P[(j + 1) % 4], 0.45, 0);
-    }
-    for (let i = 0; i < spokes; i++) {           // twin-rail spokes
-      const a = (i / spokes) * TAU, c = Math.cos(a), s = Math.sin(a);
-      line(g, [x - 0.02, c * 0.09, s * 0.09], [x - 0.02, c * (R - r), s * (R - r)], 0.8, 0);
-      line(g, [x + 0.02, c * 0.09, s * 0.09], [x + 0.02, c * (R - r), s * (R - r)], 0.8, 0);
-      ring(g, x, R * 0.5, 4, 0.9, 2, a - 0.05, a + 0.05);
-    }
-    ring(g, x, R * 0.5, 40, 0.5, 0); ring(g, x, 0.12, 14, 0.9, k);
-  };
-  // engine
-  tube(0, -1.42, -1.16, 0.2, 0.13, 3, 8, 0.9, 2); tube(0, -1.16, -0.98, 0.13, 0.07, 2, 8, 0.8, 0); ring(0, -1.42, 0.2, 20, 1, 2);
-  // wheels
-  wheel(1, -0.62, 0.8, 0.075, 6, 1);
-  wheel(2, -0.30, 0.8, 0.075, 6, 0);
-  // spine
-  tube(3, -0.98, 1.2, 0.07, 0.06, 16, 6, 0.85, 0);
-  // habitat modules: three boxes round the spine
-  for (let m = 0; m < 3; m++) {
-    const a = (m / 3) * TAU + 0.5, c = Math.cos(a), s = Math.sin(a), r0 = 0.1, r1 = 0.24, hw = 0.07;
-    const P = (x, r, t) => [x, c * r - s * t, s * r + c * t];
-    for (const [xa, xb] of [[0.05, 0.42]]) {
-      const C = [P(xa, r0, -hw), P(xa, r0, hw), P(xa, r1, hw), P(xa, r1, -hw), P(xb, r0, -hw), P(xb, r0, hw), P(xb, r1, hw), P(xb, r1, -hw)];
-      for (let i = 0; i < 4; i++) { line(4, C[i], C[(i + 1) % 4], 0.8, 0); line(4, C[i + 4], C[((i + 1) % 4) + 4], 0.8, 0); line(4, C[i], C[i + 4], 0.8, m === 0 ? 1 : 0); }
+  const X0 = 2.15;                // the point on the axis that sits mid-screen in ship view
+  const Q = [];                   // panels: 4 corners, normal, group, kind (0 panel, 1 trim, 2 truss), windows
+  const L = [];                   // fine lines: a, b, group, tint
+
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const unit = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const P = (x, r, a) => [x, Math.cos(a) * r, Math.sin(a) * r];
+  // hint is any vector pointing roughly out of the surface; it fixes which way the normal faces
+  function quad(g, a, b, c, d, hint, kind = 0, win = 0) {
+    let n = unit(cross(sub(b, a), sub(d, a)));
+    if (dot(n, hint) < 0) n = [-n[0], -n[1], -n[2]];
+    Q.push([a, b, c, d, n, g, kind, win]);
+  }
+  const line = (g, a, b, k = 0) => L.push([a, b, g, k]);
+  // surface of revolution from a profile of [x, r] points. c is the section centre, for outward normals.
+  function rev(g, prof, n, c, kindOf = () => 0, winOf = () => 0, rot = 0) {
+    for (let j = 0; j < prof.length - 1; j++) {
+      const [x0, r0] = prof[j], [x1, r1] = prof[j + 1], xm = (x0 + x1) / 2, rm = (r0 + r1) / 2, kind = kindOf(j), wp = winOf(j);
+      for (let i = 0; i < n; i++) {
+        const a0 = (i / n) * TAU + rot, a1 = ((i + 1) / n) * TAU + rot, am = (a0 + a1) / 2;
+        const hint = [xm - c[0], (rm - c[1]) * Math.cos(am), (rm - c[1]) * Math.sin(am)];
+        quad(g, P(x0, r0, a0), P(x0, r0, a1), P(x1, r1, a1), P(x1, r1, a0), hint, kind, wp && rnd() < wp ? (rnd() < 0.55 ? 2 : 1) : 0);
+      }
     }
   }
-  // small ring
-  ring(5, 0.62, 0.34, 36, 1, 1); ring(5, 0.62, 0.28, 36, 0.7, 0); ring(5, 0.58, 0.31, 36, 0.4, 0); ring(5, 0.66, 0.31, 36, 0.4, 0);
-  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; line(5, [0.62, Math.cos(a) * 0.07, Math.sin(a) * 0.07], [0.62, Math.cos(a) * 0.28, Math.sin(a) * 0.28], 0.8, 0); }
-  // solar arrays: two gridded wings
-  for (const sgn of [-1, 1]) {
-    const y0 = sgn * 0.1, y1 = sgn * 0.74, x0 = 0.82, x1 = 1.08;
-    for (let i = 0; i <= 6; i++) { const y = y0 + ((y1 - y0) * i) / 6; line(6, [x0, y, 0], [x1, y, 0], i % 6 === 0 ? 0.9 : 0.4, 2); }
-    for (let j = 0; j <= 3; j++) { const x = x0 + ((x1 - x0) * j) / 3; line(6, [x, y0, 0], [x, y1, 0], j % 3 === 0 ? 0.9 : 0.4, 2); }
-    line(6, [0.95, 0, 0], [0.95, y0, 0], 0.8, 0);
+  // a closed hull section: profile [[x, r]...] gets end caps and outward normals
+  const shell = (g, pts, n, kindOf = () => 0, winOf = () => 0) => {
+    const xs = pts.map((p) => p[0]), xm = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const last = pts.length;                     // profile segment 0 and the last one are the end caps
+    rev(g, [[pts[0][0], 0.02], ...pts, [pts[pts.length - 1][0], 0.02]], n, [xm, 0], (j) => (j === 0 || j === last ? 3 : kindOf(j - 1)), (j) => (j === 0 || j === last ? 0 : winOf(j - 1)));
+  };
+  const tube = (x0, x1, r0, r1, k) => Array.from({ length: k + 1 }, (_, i) => [x0 + ((x1 - x0) * i) / k, r0 + ((r1 - r0) * i) / k]);
+  // a ring with a rectangular section, split so each face holds a row of windows
+  function band(g, x, R0, R1, hw, n, win) {
+    const Rm = (R0 + R1) / 2;
+    rev(g, [[x - hw, R0], [x - hw, Rm], [x - hw, R1], [x, R1], [x + hw, R1], [x + hw, Rm], [x + hw, R0], [x, R0], [x - hw, R0]], n, [x, Rm],
+      (j) => (j === 2 || j === 3 ? 0 : j >= 6 ? 2 : 0), (j) => (j === 2 || j === 3 ? win : j >= 6 ? win * 0.3 : win * 0.8));
   }
-  // nose and antenna
-  tube(7, 1.2, 1.52, 0.06, 0.015, 3, 6, 0.9, 0); line(7, [1.52, 0, 0], [1.86, 0, 0], 1, 1);
-  ring(7, 1.62, 0.05, 8, 0.8, 1); ring(7, 1.72, 0.03, 8, 0.8, 1);
-  for (let i = 0; i < 3; i++) { const a = (i / 3) * TAU; line(7, [1.3, Math.cos(a) * 0.05, Math.sin(a) * 0.05], [1.44, Math.cos(a) * 0.2, Math.sin(a) * 0.2], 0.7, 0); }
+  // a rectangular beam from A to B, width along u
+  function bar(g, A, B, u, hu, hv, segs, kind = 2, win = 0) {
+    const dir = unit(sub(B, A)), v = unit(cross(dir, u));
+    const at = (f, su, sv) => [0, 1, 2].map((k) => A[k] + (B[k] - A[k]) * f + u[k] * hu * su + v[k] * hv * sv);
+    const C = [[1, 1], [1, -1], [-1, -1], [-1, 1]];
+    for (let s = 0; s < segs; s++) {
+      const f0 = s / segs, f1 = (s + 1) / segs;
+      for (let k = 0; k < 4; k++) {
+        const p = C[k], q = C[(k + 1) % 4], hs = (p[0] + q[0]) / 2, ht = (p[1] + q[1]) / 2;
+        quad(g, at(f0, ...p), at(f0, ...q), at(f1, ...q), at(f1, ...p), [0, 1, 2].map((i) => u[i] * hs + v[i] * ht), kind, win && rnd() < win ? 1 : 0);
+      }
+    }
+    quad(g, at(0, 1, 1), at(0, 1, -1), at(0, -1, -1), at(0, -1, 1), dir.map((t) => -t), kind);
+    quad(g, at(1, 1, 1), at(1, 1, -1), at(1, -1, -1), at(1, -1, 1), dir, kind);
+  }
+  const radial = (a) => [0, Math.cos(a), Math.sin(a)], tangent = (a) => [0, -Math.sin(a), Math.cos(a)];
+  const band3 = () => (j) => (j % 3 === 1 ? 0.75 : j % 3 === 2 ? 0.25 : 0.06); // hull windows come in rows
 
-  // hologram dust, fixed so it looks the same on every load
-  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const DUST = Array.from({ length: 150 }, () => { const a = rnd() * TAU, r = 1.1 + rnd() * 1.5; return [Math.cos(a) * r, (rnd() - 0.5) * 1.4, Math.sin(a) * r, rnd() * TAU, rnd()]; });
+  // stern: engine bell, a long boom and a cross antenna
+  shell(0, [[-0.52, 0.30], [-0.40, 0.28], [-0.27, 0.24], [-0.14, 0.20]], 22, (j) => (j === 1 ? 1 : 0));
+  shell(0, tube(-1.45, -0.52, 0.035, 0.035, 6), 6, () => 2);
+  line(0, [-1.45, -0.2, 0], [-1.45, 0.2, 0], 0); line(0, [-1.45, 0, -0.2], [-1.45, 0, 0.2], 0); line(0, [-1.45, 0, 0], [-1.7, 0, 0], 2);
 
-  /* ---------- state ---------- */
-  let W = 520, H = 420, mode = "idle", last = performance.now(), born = performance.now(), t = 0;
-  let yaw = -0.72, pitch = 0.36, vyaw = 0, vpitch = 0, dragging = false, px = 0, py = 0, idleSince = 0;
-  let explode = 0, energy = 0.3, spinRate = 1, flick = 1, orientAt = 0;
-  const spinAng = GROUPS.map(() => 0);
-  const MODES = { idle: { e: 0, energy: 0.3, spin: 1 }, listening: { e: 0.25, energy: 0.7, spin: 1.6 }, thinking: { e: 1, energy: 0.75, spin: 3.4 }, speaking: { e: 0.12, energy: 0.55, spin: 1.4 } };
-  const TINT = [(a) => `rgba(168,232,255,${a})`, (a) => `rgba(200,255,0,${a})`, (a) => `rgba(255,170,70,${a})`];
+  // main wheel: thick outer rim, inner ring, six spokes, braces
+  band(1, 0, 0.84, 1.0, 0.1, 84, 0.6);
+  band(1, 0, 0.50, 0.58, 0.05, 64, 0.55);
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU + 0.26; bar(1, P(0, 0.27, a), P(0, 0.86, a), tangent(a), 0.032, 0.028, 6, 2); }
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; line(1, P(0, 0.58, a), P(0, 0.86, a + 0.13), 0); }
+  // four long arrays reaching past the rim (group 8 so they can fold in)
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.785; bar(8, P(0, 0.6, a), P(0, 1.62, a), tangent(a), 0.085, 0.03, 16, 0, 0.16); }
+
+  // hub drum that the hull grows out of
+  shell(2, [[-0.16, 0.27], [0.0, 0.28], [0.16, 0.28], [0.32, 0.30], [0.50, 0.31], [0.66, 0.22]], 26, (j) => (j === 1 || j === 5 ? 1 : 0), (j) => (j >= 2 && j <= 4 ? 0.35 : 0));
+
+  // hull A, B, C with collars at the joints
+  shell(3, tube(0.66, 1.86, 0.22, 0.21, 10), 16, () => 0, band3());
+  shell(3, tube(1.86, 1.98, 0.26, 0.26, 1), 16, () => 1);
+  shell(4, tube(1.98, 2.92, 0.20, 0.19, 8), 16, () => 0, band3());
+  shell(4, tube(2.92, 3.28, 0.23, 0.23, 2), 16, (j) => (j === 2 ? 1 : 0), () => 0.25);
+  shell(6, tube(3.28, 4.50, 0.19, 0.165, 10), 16, () => 0, band3());
+  shell(6, tube(4.50, 4.60, 0.20, 0.20, 1), 16, () => 1);
+
+  // mid ring
+  band(5, 3.10, 0.43, 0.52, 0.06, 56, 0.5);
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; bar(5, P(3.10, 0.23, a), P(3.10, 0.43, a), tangent(a), 0.025, 0.025, 3, 2); }
+
+  // nose: taper, cap, probe and a raked fin
+  shell(7, [...tube(4.60, 5.30, 0.16, 0.13, 6), ...tube(5.30, 5.75, 0.13, 0.05, 4).slice(1)], 14, (j) => (j === 7 ? 1 : 0), (j) => (j > 0 && j < 6 && j % 2 ? 0.4 : 0));
+  bar(7, [5.02, -0.15, 0], [5.22, -0.48, 0], [1, 0, 0], 0.07, 0.012, 3, 0);
+  line(7, [5.75, 0, 0], [6.05, 0, 0], 2); line(7, [5.75, 0, 0], [5.92, -0.07, 0], 0); line(7, [5.75, 0, 0], [5.92, 0.07, 0], 0);
+
+  // flatten into typed arrays for the frame loop
+  const NQ = Q.length, NL = L.length;
+  const QV = new Float32Array(NQ * 12), QN = new Float32Array(NQ * 3), QX = new Float32Array(NQ);
+  const QG = new Uint8Array(NQ), QK = new Uint8Array(NQ), QW = new Uint8Array(NQ), QH = new Float32Array(NQ);
+  Q.forEach((q, i) => {
+    for (let k = 0; k < 4; k++) for (let j = 0; j < 3; j++) QV[i * 12 + k * 3 + j] = q[k][j];
+    QN.set(q[4], i * 3); QG[i] = q[5]; QK[i] = q[6]; QW[i] = q[7];
+    QX[i] = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4; QH[i] = rnd() * TAU;
+  });
+  const PX = new Float32Array(NQ * 8), FACE = new Float32Array(NQ), LP = new Float32Array(NL * 4);
+
+  /* ================= STATE ================= */
+  const YAW0 = -1.0, PITCH0 = -0.32;                 // ship view: wheel near and almost face-on, bow running away to the lower right
+  const YAWC = -Math.PI / 2 + 0.2, PITCHC = -0.08;   // core view: the wheel face-on, hull hidden behind it
+  const DIST = 11;             // camera distance: close enough for the wheel to loom over the nose
+  let motion = !reduce, explore = false, pinned = false, zoom = 1, targetZoom = 1;
+  let W = 800, H = 600, dpr = 1, bg = null, mode = "idle", last = performance.now(), born = last, t = 0;
+  let uyaw = 0, upitch = 0, vyaw = 0, vpitch = 0, dragging = false, px = 0, py = 0, idleSince = 0;
+  let explode = 0, energy = 0.3, spinRate = 1, flick = 1, scan = 0, orientAt = 0, form = 0, holdUntil = 0, level = 0;
+  let yaw = YAWC, pitch = PITCHC;
+  const spinAng = GROUPS.map(() => 0), SC = GROUPS.map(() => [1, 0]);
+  const MODES = { idle: { e: 0, energy: 0.3, spin: 1 }, listening: { e: 0.15, energy: 0.75, spin: 2 }, thinking: { e: 0.8, energy: 0.8, spin: 4 }, speaking: { e: 0.08, energy: 0.6, spin: 1.6 } };
+
+  // offscreen layers: the sharp ship, and a small copy that is blurred into the glow
+  const fx = document.createElement("canvas"), f = fx.getContext("2d");
+  const gl = document.createElement("canvas"), g2 = gl.getContext("2d");
+  const hasFilter = "filter" in g2;
+
+  // colour buckets: fills and edges are grouped by tint and strength so a frame costs ~40 draw calls
+  const FILL = [[78, 178, 238], [170, 232, 255]], FL = [0.018, 0.03, 0.045, 0.062, 0.082, 0.105, 0.135, 0.17, 0.215, 0.27];
+  const EDGE = [[120, 210, 250], [215, 246, 255], [255, 190, 90]], EL = [0.05, 0.085, 0.13, 0.19, 0.27, 0.38, 0.52, 0.72];
+  const FB = FILL.map(() => FL.map(() => [])), EB = EDGE.map(() => EL.map(() => [])), WIN = [];
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  const lvl = (v, levels) => { let i = 0; while (i < levels.length - 1 && v > (levels[i] + levels[i + 1]) / 2) i++; return i; };
+
+  /* ================= BACKGROUND ================= */
+  // Stars, a nebula and the planet do not move, so they are painted once per size.
+  function paintBg() {
+    bg = document.createElement("canvas"); bg.width = W * dpr; bg.height = H * dpr;
+    const b = bg.getContext("2d"); b.setTransform(dpr, 0, 0, dpr, 0, 0);
+    let s = 7; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    b.fillStyle = "#04080d"; b.fillRect(0, 0, W, H);
+    for (let i = 0; i < 14; i++) {              // nebula: soft blue clouds, brighter toward the upper right
+      const x = W * (0.35 + r() * 0.65), y = H * (r() * 0.7), rad = Math.max(W, H) * (0.12 + r() * 0.22);
+      const c = b.createRadialGradient(x, y, 0, x, y, rad);
+      c.addColorStop(0, `rgba(${60 + r() * 40 | 0},${110 + r() * 50 | 0},${160 + r() * 40 | 0},${0.05 + r() * 0.06})`); c.addColorStop(1, "rgba(40,90,140,0)");
+      b.fillStyle = c; b.fillRect(0, 0, W, H);
+    }
+    const pr = Math.max(W, 900) * 1.25, pcx = W * 0.32, pcy = H * 0.9 + pr;
+    for (let i = 0; i < 420; i++) {
+      const x = r() * W, y = r() * H, m = r();
+      if (Math.hypot(x - pcx, y - pcy) < pr + 6) continue;
+      b.fillStyle = `rgba(${m > 0.88 ? "255,226,170" : "200,228,255"},${0.1 + m * m * 0.6})`;
+      const z = m > 0.95 ? 1.7 : m > 0.6 ? 1.1 : 0.7; b.fillRect(x, y, z, z);
+    }
+    const at = b.createRadialGradient(pcx, pcy, pr - 6, pcx, pcy, pr + 80);
+    at.addColorStop(0, "rgba(130,205,255,0.55)"); at.addColorStop(0.1, "rgba(80,160,240,0.22)"); at.addColorStop(1, "rgba(60,140,230,0)");
+    b.fillStyle = at; b.beginPath(); b.arc(pcx, pcy, pr + 80, 0, TAU); b.fill();
+    const body = b.createRadialGradient(pcx, pcy - pr * 0.2, pr * 0.6, pcx, pcy, pr);
+    body.addColorStop(0, "#03070c"); body.addColorStop(0.8, "#081624"); body.addColorStop(1, "#16405f");
+    b.fillStyle = body; b.beginPath(); b.arc(pcx, pcy, pr, 0, TAU); b.fill();
+    b.strokeStyle = "rgba(180,230,255,0.8)"; b.lineWidth = 1.3; b.beginPath(); b.arc(pcx, pcy, pr, 0, TAU); b.stroke();
+    for (let c = 0; c < 22; c++) {              // city lights on the night side, in clusters
+      const ca = -Math.PI / 2 + (r() - 0.5) * 0.9, cd = 14 + r() * 160;
+      for (let i = 0; i < 30; i++) {
+        const a = ca + (r() - 0.5) * 0.05, rr = pr - cd - (r() - 0.5) * 34, x = pcx + Math.cos(a) * rr, y = pcy + Math.sin(a) * rr;
+        if (rr > pr - 5 || y > H) continue;
+        b.fillStyle = `rgba(255,${(176 + r() * 50) | 0},104,${0.12 + r() * 0.42})`; b.fillRect(x, y, 1.2, 1.2);
+      }
+    }
+  }
 
   function fit() {
-    const r = box.getBoundingClientRect();
-    if (r.width < 2) return;
-    W = Math.round(r.width); H = Math.round(r.height);
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cv.width = W * dpr; cv.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const rc = box.getBoundingClientRect();
+    if (rc.width < 2 || rc.height < 2) return;
+    W = Math.round(rc.width); H = Math.round(rc.height);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = fx.width = W * dpr; cv.height = fx.height = H * dpr;
+    gl.width = Math.ceil(fx.width / 4); gl.height = Math.ceil(fx.height / 4);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); f.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintBg();
     if (reduce) frame(performance.now());
   }
 
-  let cyw = 1, syw = 0, cpt = 1, spt = 0, S = 100, CX = 0, CY = 0;
-  function world(x, y, z) {                      // rotate by yaw then pitch, then perspective
+  /* ================= PROJECTION ================= */
+  let cyw = 1, syw = 0, cpt = 1, spt = 0, S = 100, CX = 0, CY = 0, pivot = 0, arrK = 1;
+  function world(x, y, z) {
+    x -= pivot;
     const X = x * cyw + z * syw, Z = -x * syw + z * cyw;
-    const Y = y * cpt - Z * spt, Z2 = y * spt + Z * cpt, d = 4.2 / (4.2 + Z2);
+    const Y = y * cpt - Z * spt, Z2 = y * spt + Z * cpt, d = DIST / (DIST + Z2);
     return [CX + X * S * d, CY + Y * S * d, d];
   }
+  // one model point of group g, with its spin, slide and (for the arrays) fold applied
+  function place(x, y, z, g, out, o) {
+    if (g === 8) { const r = Math.hypot(y, z); if (r > 1) { const k = (1 + (r - 1) * arrK) / r; y *= k; z *= k; } }
+    const c = SC[g][0], s = SC[g][1], yy = y * c - z * s, zz = y * s + z * c;
+    const xx = x + GROUPS[g].off * explode * 0.62 - pivot;
+    const X = xx * cyw + zz * syw, Z = -xx * syw + zz * cyw, d = DIST / (DIST + yy * spt + Z * cpt);
+    out[o] = CX + X * S * d; out[o + 1] = CY + (yy * cpt - Z * spt) * S * d;
+  }
 
+  /* ================= FRAME ================= */
   function frame(now) {
     const dt = Math.min(now - last, 50) / 1000; last = now;
-    if (box.offsetParent === null) { if (!reduce) requestAnimationFrame(frame); return; } // tab hidden
+    if (box.offsetWidth === 0) { if (!reduce) requestAnimationFrame(frame); return; } // tab hidden
     const m = MODES[mode];
-    explode += (m.e - explode) * (reduce ? 1 : 0.045);
+    if (mode !== "idle") holdUntil = now + 5500;
+    const want = pinned || explore || mode !== "idle" || now < holdUntil ? 1 : 0;
+    form = reduce ? want : form + (want - form) * (want ? 0.024 : 0.016);
+    explode += ((explore ? 1.4 : m.e * smooth(form * 1.4 - 0.4)) - explode) * (reduce ? 1 : 0.045);
+    zoom += (targetZoom - zoom) * (reduce ? 1 : 0.12);
     spinRate += (m.spin - spinRate) * 0.05;
-    const targetE = mode === "speaking" ? m.energy + 0.3 * Math.abs(Math.sin(now / 120)) : m.energy;
-    energy += (targetE - energy) * (reduce ? 1 : 0.09);
-    if (!reduce) {
+    scan += ((mode === "idle" ? 0 : 1) - scan) * (reduce ? 1 : 0.06);
+    energy += ((mode === "speaking" ? m.energy + 0.3 * Math.abs(Math.sin(now / 120)) : m.energy) + level * 0.5 - energy) * (reduce ? 1 : 0.09);
+    level *= 0.9;
+    if (!reduce && motion) {
       t += dt;
-      GROUPS.forEach((g, i) => { spinAng[i] += g.spin * spinRate * dt; });
+      GROUPS.forEach((gg, i) => { spinAng[i] += gg.spin * spinRate * (1.6 - smooth(form) * 0.6) * dt; });
       if (!dragging) {
-        yaw += vyaw; pitch += vpitch; vyaw *= 0.94; vpitch *= 0.94;
-        if (now - idleSince > 1400) { yaw += 0.10 * dt; pitch += (0.36 - pitch) * 0.01; }   // drift back to a slow turn
+        uyaw += vyaw; upitch += vpitch; vyaw *= 0.94; vpitch *= 0.94;
+        if (now - idleSince > 3500) { uyaw *= 0.98; upitch *= 0.98; }   // drift back to the resting pose
       }
-      flick = Math.random() < 0.02 ? 0.82 + Math.random() * 0.1 : flick + (1 - flick) * 0.2;
+      flick = Math.random() < 0.01 ? 0.92 + Math.random() * 0.05 : flick + (1 - flick) * 0.2;
     }
-    pitch = Math.max(-1.2, Math.min(1.2, pitch));
+    const fe = smooth(form), swing = smooth(form / 0.75), grow = smooth((form - 0.12) / 0.88);
+    yaw = lerp(YAWC, YAW0 + 0.1 * Math.sin(t * 0.21), swing) + uyaw;
+    pitch = clamp(lerp(PITCHC, PITCH0 + 0.03 * Math.sin(t * 0.16 + 1), swing) + upitch, -1.2, 1.2);
     cyw = Math.cos(yaw); syw = Math.sin(yaw); cpt = Math.cos(pitch); spt = Math.sin(pitch);
-    S = Math.min(W / 3.9, H / 2.5) * (1 - explode * 0.13); CX = W / 2; CY = H * 0.46;
+    S = lerp(Math.min(W / 5.4, H / 3.4), Math.min(W / 7.2, H / 4.5), fe) * zoom * (1 - explode * 0.1);
+    CX = W * lerp(0.5, 0.47, fe); CY = H * lerp(0.5, 0.5, fe); pivot = lerp(0, X0, fe); arrK = lerp(0.18, 1, grow);
+    const front = lerp(0.5, 6.4, grow), back = lerp(-0.12, -1.8, grow);
+    GROUPS.forEach((_, i) => { SC[i][0] = Math.cos(spinAng[i]); SC[i][1] = Math.sin(spinAng[i]); });
+    const fade = smooth((now - born) / 1400);
 
+    /* ---- background ---- */
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, W, H);
-    ctx.globalCompositeOperation = "lighter";
-    ctx.lineCap = "round";
+    if (bg) ctx.drawImage(bg, 0, 0, W, H);
 
-    // projector base and light cone
-    const by = H * 0.93, brx = S * 1.25, bry = S * 0.2;
-    const cone = ctx.createLinearGradient(0, by, 0, CY - S * 0.4);
-    cone.addColorStop(0, `rgba(120,220,255,${0.13 * flick})`); cone.addColorStop(1, "rgba(120,220,255,0)");
-    ctx.fillStyle = cone; ctx.beginPath(); ctx.moveTo(CX - brx * 0.5, by); ctx.lineTo(CX - brx * 1.25, CY - S * 0.5); ctx.lineTo(CX + brx * 1.25, CY - S * 0.5); ctx.lineTo(CX + brx * 0.5, by); ctx.closePath(); ctx.fill();
-    for (let i = 0; i < 3; i++) {
-      ctx.strokeStyle = i === 0 ? TINT[1](0.55 * flick) : TINT[0](0.28 - i * 0.07); ctx.lineWidth = i === 0 ? 1.4 : 1;
-      ctx.beginPath(); ctx.ellipse(CX, by, brx * (0.5 + i * 0.22), bry * (0.5 + i * 0.22), 0, 0, TAU); ctx.stroke();
-    }
-    ctx.setLineDash([2, 5]); ctx.strokeStyle = TINT[0](0.3); ctx.beginPath(); ctx.ellipse(CX, by, brx * 1.12, bry * 1.12, 0, t * 0.3, t * 0.3 + TAU); ctx.stroke(); ctx.setLineDash([]);
+    /* ---- the ship, into the offscreen layer ---- */
+    f.globalCompositeOperation = "source-over"; f.clearRect(0, 0, W, H);
+    f.globalCompositeOperation = "lighter"; f.lineCap = "round"; f.lineJoin = "round";
+    const hub = world(0, 0, 0), halo = f.createRadialGradient(hub[0], hub[1], 0, hub[0], hub[1], S * 1.9);
+    halo.addColorStop(0, `rgba(90,190,255,${(0.16 + 0.08 * energy) * flick})`); halo.addColorStop(0.5, `rgba(60,150,230,${0.05 * flick})`); halo.addColorStop(1, "rgba(60,150,230,0)");
+    f.fillStyle = halo; f.fillRect(hub[0] - S * 2, hub[1] - S * 2, S * 4, S * 4);
 
-    // orbit rings behind the station, with a moving body on each
-    for (const [R, sp, k] of [[2.0, 0.22, 0], [2.5, -0.15, 2]]) {
-      ctx.strokeStyle = TINT[0](0.1); ctx.lineWidth = 1; ctx.beginPath();
-      for (let i = 0; i <= 72; i++) { const a = (i / 72) * TAU, p = world(Math.cos(a) * R, 0.25, Math.sin(a) * R); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
-      ctx.stroke();
-      const b = world(Math.cos(t * sp) * R, 0.25, Math.sin(t * sp) * R);
-      ctx.fillStyle = TINT[k](0.9); ctx.fillRect(b[0] - 2, b[1] - 2, 4, 4);
-      ctx.strokeStyle = TINT[k](0.4); ctx.strokeRect(b[0] - 5, b[1] - 5, 10, 10);
+    // project and shade every panel
+    const eg = (0.78 + energy * 0.42) * flick * fade, scanY = CY + Math.sin(t * (0.8 + explode * 1.6)) * S * 1.3;
+    const Lx = -0.42, Ly = -0.62, Lz = -0.66;          // light from the upper left, toward the viewer
+    for (let q = 0; q < NQ; q++) {
+      const cx = QX[q]; FACE[q] = -9;
+      if (cx > front || cx < back) continue;
+      const g = QG[q], vis = clamp((front - cx) / 0.35) * clamp((cx - back) / 0.25);
+      const c = SC[g][0], s = SC[g][1], nx = QN[q * 3], ny0 = QN[q * 3 + 1], nz0 = QN[q * 3 + 2];
+      const ny = ny0 * c - nz0 * s, nz = ny0 * s + nz0 * c;
+      const NZ = -nx * syw + nz * cyw, NY = ny * cpt - NZ * spt, NZ2 = ny * spt + NZ * cpt, NX = nx * cyw + nz * syw;
+      const facing = -NZ2; FACE[q] = facing;
+      const o = q * 12, p = q * 8;
+      for (let k = 0; k < 4; k++) place(QV[o + k * 3], QV[o + k * 3 + 1], QV[o + k * 3 + 2], g, PX, p + k * 2);
+      const kind = QK[q], fres = 1 - Math.abs(facing), lam = Math.max(0, NX * Lx + NY * Ly + NZ2 * Lz);
+      let fa, ea;
+      if (facing > 0) { fa = 0.034 + 0.14 * lam + 0.22 * fres * fres; ea = 0.12 + 0.44 * fres + 0.24 * lam; }
+      else { fa = 0.018 + 0.03 * fres; ea = 0.05 + 0.06 * fres; }
+      if (kind === 1) { fa *= 1.35; ea *= 1.5; } else if (kind === 2) { fa *= 0.55; ea *= 1.1; } else if (kind === 3) { fa *= 0.3; ea *= 0.6; }
+      fa = Math.min(fa, 0.2);
+      if (scan > 0.02) { const yy = (PX[p + 1] + PX[p + 5]) / 2; ea += Math.max(0, 1 - Math.abs(yy - scanY) / 14) * 0.45 * scan; }
+      fa *= eg * vis; ea *= eg * vis;
+      if (fa > 0.012) FB[kind === 1 || lam > 0.55 ? 1 : 0][lvl(fa, FL)].push(q);
+      if (ea > 0.04) EB[kind === 1 && facing > 0 ? 1 : 0][lvl(ea, EL)].push(q);
+      if (QW[q] && facing > 0.08 && vis > 0.5 && Math.sin(t * 0.5 + QH[q]) > -0.92) WIN.push(q);
     }
-    for (const d of DUST) {
-      const p = world(d[0], d[1], d[2]), a = (0.25 + 0.4 * Math.sin(now / 700 + d[3])) * Math.max(0, p[2] - 0.6) * (0.4 + energy);
-      if (a > 0.03) { ctx.fillStyle = d[4] > 0.9 ? TINT[2](a) : TINT[0](a); ctx.fillRect(p[0], p[1], 1.2, 1.2); }
+    for (let k = 0; k < FB.length; k++) for (let l = 0; l < FL.length; l++) {
+      const a = FB[k][l]; if (!a.length) continue;
+      f.fillStyle = rgba(FILL[k], FL[l]); f.beginPath();
+      for (const q of a) { const p = q * 8; f.moveTo(PX[p], PX[p + 1]); f.lineTo(PX[p + 2], PX[p + 3]); f.lineTo(PX[p + 4], PX[p + 5]); f.lineTo(PX[p + 6], PX[p + 7]); f.closePath(); }
+      f.fill(); a.length = 0;
     }
-
-    // the station
-    const built = reduce ? SEG.length : Math.min(SEG.length, Math.floor(((now - born) / 1700) * SEG.length));
-    const scanY = CY + Math.sin(t * (0.8 + explode * 1.6)) * S * 1.0;
-    const sc = GROUPS.map((_, i) => [Math.cos(spinAng[i]), Math.sin(spinAng[i])]);
-    const ex = explode * 0.62;
-    const pass = (dx, tintOverride, alphaMul, step) => {
-      for (let i = 0; i < built; i += step) {
-        const s = SEG[i], g = s[6], c = sc[g][0], sn = sc[g][1], o = GROUPS[g].off * ex;
-        const a = world(s[0] + o, s[1] * c - s[2] * sn, s[1] * sn + s[2] * c);
-        const b = world(s[3] + o, s[4] * c - s[5] * sn, s[4] * sn + s[5] * c);
-        const depth = Math.max(0.12, Math.min(1, ((a[2] + b[2]) / 2 - 0.78) * 2.3));
-        const near = Math.max(0, 1 - Math.abs((a[1] + b[1]) / 2 - scanY) / 16);
-        const al = Math.min(1, s[7] * depth * (0.55 + energy * 0.5) + near * 0.55) * alphaMul * flick;
-        if (al < 0.03) continue;
-        ctx.strokeStyle = TINT[tintOverride ?? s[8]](al); ctx.lineWidth = s[7] >= 1 ? 1.35 : 1;
-        ctx.beginPath(); ctx.moveTo(a[0] + dx, a[1]); ctx.lineTo(b[0] + dx, b[1]); ctx.stroke();
+    const strokeEdges = (bk, dx, tint) => {
+      for (let k = 0; k < bk.length; k++) for (let l = 0; l < EL.length; l++) {
+        const a = bk[k][l]; if (!a.length) continue;
+        f.strokeStyle = rgba(EDGE[tint ?? k], tint == null ? EL[l] : EL[l] * 0.3 * explode); f.lineWidth = l >= 5 ? 1.15 : 0.8; f.beginPath();
+        for (const q of a) { const p = q * 8; f.moveTo(PX[p + 2] + dx, PX[p + 3]); f.lineTo(PX[p] + dx, PX[p + 1]); f.lineTo(PX[p + 6] + dx, PX[p + 7]); }
+        f.stroke();
       }
     };
-    if (explode > 0.05) { pass(explode * 7, 1, 0.32 * explode, 2); pass(-explode * 7, 2, 0.32 * explode, 2); } // colour-split ghost layers
-    pass(0, null, 1, 1);
+    if (explode > 0.05) { strokeEdges(EB, explode * 9, 2); strokeEdges(EB, -explode * 9, 1); } // colour-split ghosts
+    strokeEdges(EB, 0, null);
+    for (const k of EB) for (const a of k) a.length = 0;
 
-    // scan layers: planes that sweep along the spine while Envi works
-    if (explode > 0.05 && !reduce) {
-      for (let k = 0; k < 5; k++) {
-        const x = -1.7 + (((t * 0.32 + k / 5) % 1) * 3.9), e = 1.02, P = [world(x, -e, -e), world(x, e, -e), world(x, e, e), world(x, -e, e)];
-        const fade = Math.sin(((t * 0.32 + k / 5) % 1) * Math.PI) * explode;
-        ctx.beginPath(); P.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
-        ctx.fillStyle = TINT[1](0.035 * fade); ctx.fill(); ctx.strokeStyle = TINT[1](0.5 * fade); ctx.lineWidth = 1; ctx.stroke();
-        const tick = world(x, -e, -e); ctx.fillStyle = TINT[1](0.9 * fade); ctx.fillRect(tick[0] - 1.5, tick[1] - 1.5, 3, 3);
+    // fine lines (braces, booms, antennae)
+    for (let i = 0; i < NL; i++) {
+      const [a, b, g, k] = L[i], cx = (a[0] + b[0]) / 2; if (cx > front || cx < back) continue;
+      place(a[0], a[1], a[2], g, LP, 0); place(b[0], b[1], b[2], g, LP, 2);
+      f.strokeStyle = rgba(EDGE[k], 0.45 * eg); f.lineWidth = 0.8; f.beginPath(); f.moveTo(LP[0], LP[1]); f.lineTo(LP[2], LP[3]); f.stroke();
+    }
+
+    // lit windows: small amber panes set into the panels that face the viewer
+    if (WIN.length) {
+      const wa = Math.min(1, 0.85 + 0.3 * energy) * fade * flick;
+      f.fillStyle = `rgba(255,204,118,${wa})`; f.beginPath();
+      const pane = (p, u0, u1, v0, v1) => {
+        const bl = (u, v) => { const a = 1 - u, b = 1 - v; return [PX[p] * a * b + PX[p + 2] * u * b + PX[p + 4] * u * v + PX[p + 6] * a * v, PX[p + 1] * a * b + PX[p + 3] * u * b + PX[p + 5] * u * v + PX[p + 7] * a * v]; };
+        const A = bl(u0, v0), B = bl(u1, v0), C = bl(u1, v1), D = bl(u0, v1);
+        f.moveTo(A[0], A[1]); f.lineTo(B[0], B[1]); f.lineTo(C[0], C[1]); f.lineTo(D[0], D[1]); f.closePath();
+      };
+      for (const q of WIN) { const p = q * 8; if (QW[q] === 2) { pane(p, 0.1, 0.44, 0.24, 0.76); pane(p, 0.56, 0.9, 0.24, 0.76); } else pane(p, 0.2, 0.8, 0.26, 0.74); }
+      f.fill(); WIN.length = 0;
+    }
+
+    /* ---- the circular core: rings in the wheel's plane, strongest while at rest ---- */
+    const co = (1 - fe) * fade;
+    if (co > 0.02) {
+      const ring = (R, a0, a1, col, w, dash) => {
+        f.strokeStyle = col; f.lineWidth = w; f.setLineDash(dash || []); f.beginPath();
+        const n = Math.max(12, Math.ceil(((a1 - a0) / TAU) * 120));
+        for (let i = 0; i <= n; i++) { const a = a0 + ((a1 - a0) * i) / n, pp = world(-0.12, Math.cos(a) * R, Math.sin(a) * R); i ? f.lineTo(pp[0], pp[1]) : f.moveTo(pp[0], pp[1]); }
+        f.stroke(); f.setLineDash([]);
+      };
+      const tc = t * 0.25;
+      ring(1.2, 0, TAU, `rgba(150,222,255,${0.35 * co})`, 1);
+      ring(1.3, tc, tc + TAU, `rgba(150,222,255,${0.5 * co})`, 1, [1.5, 7]);
+      ring(1.38, -tc * 1.6, -tc * 1.6 + 0.9, `rgba(255,190,80,${0.85 * co})`, 2.2);
+      ring(1.38, -tc * 1.6 + Math.PI, -tc * 1.6 + Math.PI + 0.9, `rgba(255,190,80,${0.85 * co})`, 2.2);
+      ring(1.5, -tc * 0.5, -tc * 0.5 + TAU, `rgba(150,222,255,${0.18 * co})`, 1, [10, 14]);
+      for (let i = 0; i < 72; i++) {                   // tick marks round the rim
+        const a = (i / 72) * TAU + tc * 0.4, long = i % 6 === 0, a1 = world(-0.12, Math.cos(a) * 1.08, Math.sin(a) * 1.08), b1 = world(-0.12, Math.cos(a) * (long ? 1.16 : 1.12), Math.sin(a) * (long ? 1.16 : 1.12));
+        f.strokeStyle = i % 18 === 0 ? `rgba(255,190,80,${0.9 * co})` : `rgba(170,230,255,${(long ? 0.6 : 0.3) * co})`; f.lineWidth = long ? 1.4 : 1;
+        f.beginPath(); f.moveTo(a1[0], a1[1]); f.lineTo(b1[0], b1[1]); f.stroke();
       }
+      const pulse = 1 + 0.06 * Math.sin(t * 2.2) + level * 0.3, cg = f.createRadialGradient(hub[0], hub[1], 0, hub[0], hub[1], S * 0.42 * pulse);
+      cg.addColorStop(0, `rgba(230,250,255,${0.55 * co})`); cg.addColorStop(0.35, `rgba(120,210,255,${0.28 * co})`); cg.addColorStop(1, "rgba(80,170,255,0)");
+      f.fillStyle = cg; f.beginPath(); f.arc(hub[0], hub[1], S * 0.42 * pulse, 0, TAU); f.fill();
     }
-    // data packets running up the spine
-    if (mode !== "idle" && !reduce) for (let k = 0; k < 6; k++) {
-      const x = -1.1 + (((t * 0.9 + k / 6) % 1) * 2.9), p = world(x, 0, 0);
-      ctx.fillStyle = TINT[1](0.95); ctx.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3);
-    }
-    // listening: ripples from the main wheel
-    if (mode === "listening" && !reduce) for (let k = 0; k < 3; k++) {
-      const f = ((now / 1300) + k / 3) % 1; ctx.strokeStyle = TINT[1]((1 - f) * 0.55); ctx.lineWidth = 1.2; ctx.beginPath();
-      for (let i = 0; i <= 48; i++) { const a = (i / 48) * TAU, p = world(-0.46, Math.cos(a) * (0.9 + f), Math.sin(a) * (0.9 + f)); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }
-      ctx.stroke();
-    }
-    // the bright scan line itself
-    const sg = ctx.createLinearGradient(CX - S * 2, 0, CX + S * 2, 0);
-    sg.addColorStop(0, "rgba(168,232,255,0)"); sg.addColorStop(0.5, `rgba(168,232,255,${0.2 + explode * 0.25})`); sg.addColorStop(1, "rgba(168,232,255,0)");
-    ctx.fillStyle = sg; ctx.fillRect(CX - S * 2, scanY, S * 4, 1);
 
+    /* ---- orbits and working effects ---- */
+    if (fe > 0.05) for (const [R, sp, k] of [[3.6, 0.16, 0], [4.6, -0.11, 2]]) {
+      const at = (a) => world(X0 + Math.cos(a) * R, Math.sin(a) * R * 0.48, Math.sin(a) * R * 0.88);
+      f.strokeStyle = rgba(EDGE[0], 0.16 * fe); f.lineWidth = 1; f.beginPath();
+      for (let i = 0; i <= 96; i++) { const pp = at((i / 96) * TAU); i ? f.lineTo(pp[0], pp[1]) : f.moveTo(pp[0], pp[1]); }
+      f.stroke();
+      const b = at(t * sp + k); f.fillStyle = rgba(EDGE[k], 0.9 * fe); f.fillRect(b[0] - 1.5, b[1] - 1.5, 3, 3);
+    }
+    if (explode > 0.05 && !reduce) for (let k = 0; k < 5; k++) {   // scan layers sweep along the spine
+      const ff = (t * 0.3 + k / 5) % 1, x = -1.9 + ff * 8.2, e = 1.15, V = [world(x, -e, -e), world(x, e, -e), world(x, e, e), world(x, -e, e)];
+      const a = Math.sin(ff * Math.PI) * explode;
+      f.beginPath(); V.forEach((pp, i) => (i ? f.lineTo(pp[0], pp[1]) : f.moveTo(pp[0], pp[1]))); f.closePath();
+      f.fillStyle = rgba(EDGE[2], 0.03 * a); f.fill(); f.strokeStyle = rgba(EDGE[2], 0.45 * a); f.lineWidth = 1; f.stroke();
+    }
+    if (mode !== "idle" && !reduce) for (let k = 0; k < 7; k++) {   // data packets running up the spine
+      const x = ((t * 0.8 + k / 7) % 1) * Math.max(0.3, front); if (x > front) continue;
+      const pp = world(x, 0, 0); f.fillStyle = rgba(EDGE[2], 0.95); f.fillRect(pp[0] - 1.5, pp[1] - 1.5, 3, 3);
+    }
+    if (mode === "listening" && !reduce) for (let k = 0; k < 3; k++) {   // ripples from the wheel
+      const ff = ((now / 1300) + k / 3) % 1, R = 1.1 + ff * 0.8 + level * 0.2; f.strokeStyle = rgba(EDGE[2], (1 - ff) * 0.55); f.lineWidth = 1.2; f.beginPath();
+      for (let i = 0; i <= 64; i++) { const a = (i / 64) * TAU, pp = world(0, Math.cos(a) * R, Math.sin(a) * R); i ? f.lineTo(pp[0], pp[1]) : f.moveTo(pp[0], pp[1]); }
+      f.stroke();
+    }
+
+    /* ---- composite: blurred glow under the sharp ship ---- */
+    g2.globalCompositeOperation = "source-over"; g2.clearRect(0, 0, gl.width, gl.height);
+    if (hasFilter) g2.filter = "blur(2.5px)";
+    g2.drawImage(fx, 0, 0, gl.width, gl.height);
+    if (hasFilter) g2.filter = "none";
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.95; ctx.drawImage(gl, 0, 0, W, H);
+    ctx.globalAlpha = 1; ctx.drawImage(fx, 0, 0, W, H);
+    if (scan > 0.02) {
+      const sg = ctx.createLinearGradient(CX - S * 3, 0, CX + S * 3, 0);
+      sg.addColorStop(0, "rgba(150,222,255,0)"); sg.addColorStop(0.5, `rgba(150,222,255,${(0.14 + explode * 0.2) * scan})`); sg.addColorStop(1, "rgba(150,222,255,0)");
+      ctx.fillStyle = sg; ctx.fillRect(CX - S * 3, scanY, S * 6, 1);
+    }
     ctx.globalCompositeOperation = "source-over";
-    if (now - orientAt > 140) { orientAt = now; api.onOrient?.(((yaw * 180 / Math.PI) % 360 + 360) % 360, pitch * 180 / Math.PI, explode); }
+
+    if (now - orientAt > 140) { orientAt = now; api.onOrient?.(((yaw * 180 / Math.PI) % 360 + 360) % 360, pitch * 180 / Math.PI, explode, form); }
     if (!reduce) requestAnimationFrame(frame);
   }
 
-  /* ---------- interaction ---------- */
+  /* ================= INTERACTION ================= */
+  const redraw = () => { if (reduce) frame(performance.now()); };
+  const home = () => { uyaw = upitch = vyaw = vpitch = 0; targetZoom = 1; redraw(); };
   cv.addEventListener("pointerdown", (e) => { dragging = true; px = e.clientX; py = e.clientY; vyaw = vpitch = 0; cv.setPointerCapture(e.pointerId); cv.classList.add("grab"); });
   cv.addEventListener("pointermove", (e) => {
     if (!dragging) return;
     const dx = (e.clientX - px) * 0.008, dy = (e.clientY - py) * 0.006; px = e.clientX; py = e.clientY;
-    yaw += dx; pitch += dy; vyaw = dx; vpitch = dy; if (reduce) frame(performance.now());
+    uyaw += dx; upitch += dy; vyaw = dx; vpitch = dy; redraw();
   });
   const drop = () => { dragging = false; idleSince = performance.now(); cv.classList.remove("grab"); };
   cv.addEventListener("pointerup", drop); cv.addEventListener("pointercancel", drop);
-  cv.addEventListener("dblclick", () => { yaw = -0.72; pitch = 0.36; vyaw = vpitch = 0; if (reduce) frame(performance.now()); });
+  cv.addEventListener("dblclick", home);
+  const changeZoom = (delta) => { targetZoom = clamp(targetZoom + delta, 0.6, 1.8); redraw(); };
   cv.addEventListener("keydown", (e) => {
     const k = { ArrowLeft: [-0.12, 0], ArrowRight: [0.12, 0], ArrowUp: [0, -0.08], ArrowDown: [0, 0.08] }[e.key];
-    if (k) { e.preventDefault(); yaw += k[0]; pitch += k[1]; idleSince = performance.now(); if (reduce) frame(performance.now()); }
-    else if (e.key === "Home") { yaw = -0.72; pitch = 0.36; if (reduce) frame(performance.now()); }
+    if (k) { e.preventDefault(); uyaw += k[0]; upitch += k[1]; idleSince = performance.now(); redraw(); }
+    else if (e.key === "Home") home();
+    else if (["+", "=", "-"].includes(e.key)) { e.preventDefault(); changeZoom(e.key === "-" ? -0.15 : 0.15); }
   });
+  cv.addEventListener("wheel", (e) => { e.preventDefault(); changeZoom(-Math.sign(e.deltaY) * 0.08); }, { passive: false });
+  const $ = (id) => document.getElementById(id);
+  const toggle = (id, on, onText, offText) => { const b = $(id); if (!b) return; b.setAttribute("aria-pressed", String(on)); b.textContent = on ? onText : offText; };
+  $("shipReset")?.addEventListener("click", home);
+  $("shipZoomIn")?.addEventListener("click", () => changeZoom(0.15));
+  $("shipZoomOut")?.addEventListener("click", () => changeZoom(-0.15));
+  $("shipPin")?.addEventListener("click", () => { pinned = !pinned; toggle("shipPin", pinned, "Show core", "Show ship"); redraw(); });
+  $("shipLayers")?.addEventListener("click", () => { explore = !explore; toggle("shipLayers", explore, "Close layers", "Explore layers"); redraw(); });
+  toggle("shipMotion", motion, "Motion on", "Motion off");
+  if (reduce && $("shipMotion")) { $("shipMotion").disabled = true; $("shipMotion").textContent = "Reduced motion"; }
+  $("shipMotion")?.addEventListener("click", () => { motion = !motion; vyaw = vpitch = 0; toggle("shipMotion", motion, "Motion on", "Motion off"); });
 
   const api = {
-    setMode(m) { if (MODES[m]) { mode = m; if (reduce) frame(performance.now()); } },
+    setMode(m) { if (MODES[m]) { mode = m; redraw(); } },
     get mode() { return mode; },
+    get form() { return form; },
+    pulse(v) { level = Math.max(level, clamp(v)); },   // voice or text activity, 0..1
     onOrient: null,
   };
   window.Holo = api;

@@ -11,13 +11,13 @@
 
 /* ================= NOTCH ================= */
 .notch {
-  --tabs-h: 54px; --status-h: 30px; --handle-h: 12px;
+  --tabs-h: 62px; --status-h: 34px; --handle-h: 12px;
   position: fixed; top: 0; left: 50%; z-index: 60; width: min(580px, calc(100vw - 2 * var(--ear) - 16px));
   transform: translateX(-50%); pointer-events: none;
 }
 .notch-slab {
   position: relative; pointer-events: auto; background: var(--slab); color: var(--ice);
-  border-radius: 0 0 22px 22px; box-shadow: 0 0 0 1px var(--slab-edge), 0 18px 40px -18px rgba(0, 0, 0, .9);
+  border-radius: 0 0 26px 26px; box-shadow: 0 0 0 1px var(--slab-edge), 0 18px 40px -18px rgba(0, 0, 0, .9);
   transform: translateY(calc(-100% + var(--handle-h)));
   transition: transform .26s var(--leave);
 }
@@ -31,6 +31,9 @@
 /* an invisible strip under the collapsed line makes it easy to hit */
 .notch::after { content: ""; position: absolute; left: 25%; right: 25%; top: 0; height: 22px; pointer-events: auto; }
 .notch.open::after, .notch.busy::after { display: none; }
+.notch:not(.open):not(:focus-within) .tabs { visibility: hidden; }
+.notch:not(.open):not(.busy):not(:focus-within) .notch-slab { background: transparent; box-shadow: none; }
+.notch:not(.open):not(.busy):not(:focus-within) .notch-status { visibility: hidden; }
 
 .notch.busy .notch-slab { transform: translateY(calc(-1 * var(--tabs-h))); transition: transform .42s var(--spring); }
 .notch.open .notch-slab, .notch:focus-within .notch-slab { transform: none; transition: transform .42s var(--spring); }
@@ -166,6 +169,7 @@
 .radial-fan.stack > svg { display: none; }
 .radial-fan.stack .fan-title { position: static; text-align: center; }
 .radial-fan.stack .fan-item, .radial-fan.stack .fan-item.hi { position: static; transform: none; flex: none; height: 46px; animation-name: fade; }
+.radial-fan.stack { max-height: calc(100dvh - var(--y) - 160px); overflow-y: auto; padding: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
   .notch-slab, .dock, .gauge .arc, .knob, .fan-item { transition: none; }

@@ -36,7 +36,9 @@
   const openNotch = (v) => { clearTimeout(closeT); notch.classList.toggle("open", v); handle.setAttribute("aria-expanded", String(v)); handle.setAttribute("aria-label", v ? "Hide sections" : "Show sections"); };
   notch.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") openNotch(true); });
   notch.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") closeT = setTimeout(() => openNotch(false), 320); });
-  handle.addEventListener("click", () => openNotch(!notch.classList.contains("open")));
+  handle.addEventListener("click", () => { const next=!notch.classList.contains("open"); openNotch(next); if(!next) handle.blur(); });
+  notch.addEventListener("focusin", (e) => { if(e.target.matches(":focus-visible")) openNotch(true); });
+  notch.addEventListener("focusout", (e) => { if(!notch.contains(e.relatedTarget)) openNotch(false); });
   document.addEventListener("pointerdown", (e) => { if (notch.classList.contains("open") && !notch.contains(e.target)) openNotch(false); });
   notch.addEventListener("keydown", (e) => { if (e.key === "Escape") { openNotch(false); document.activeElement?.blur(); } });
   on("tab", () => { if (coarse.matches) closeT = setTimeout(() => openNotch(false), 260); });
@@ -182,6 +184,7 @@
   };
 
   const radial = el("div", "radial"); radial.hidden = true; radial.setAttribute("role", "dialog"); radial.setAttribute("aria-label", "Quick menu");
+  radial.setAttribute("aria-modal", "true");
   radial.innerHTML = `<div class="radial-scrim"></div>
     <div class="radial-ring"><svg viewBox="0 0 248 248"><circle class="base" cx="124" cy="124" r="121"/>${SEGS.map((s, i) => {
       const [ix, iy] = pt((R_OUT + R_IN) / 2, (i + .5) * STEP);
@@ -205,7 +208,7 @@
     active = i; segEls.forEach((g, k) => g.classList.toggle("on", k === i));
     const seg = SEGS[i]; items = seg.items(); $("span", knob).textContent = seg.name;
     side = cx < innerWidth - 400 ? 1 : cx > 400 ? -1 : 1;
-    const stack = innerWidth < 640;                 // phones: labels form a list under the ring
+    const stack = innerWidth < 760;                 // narrow windows need a list to avoid clipped labels
     fan.classList.toggle("stack", stack);
     const n = items.length, mid = (n - 1) / 2, half = mid * 46 + 30;
     shiftY = Math.max(0, 16 + half - cy) - Math.max(0, cy + half + 16 - innerHeight);
@@ -231,7 +234,7 @@
   function open(x, y, viaKeyboard) {
     lastFocus = document.activeElement;
     cx = Math.min(Math.max(x, 140), innerWidth - 140); cy = Math.min(Math.max(y, 140), innerHeight - 140);
-    if (innerWidth < 640) { cx = innerWidth / 2; cy = 150; }
+    if (innerWidth < 760) { cx = innerWidth / 2; cy = Math.min(150, innerHeight * .3); }
     radial.style.setProperty("--x", cx + "px"); radial.style.setProperty("--y", cy + "px");
     radial.classList.remove("closing"); radial.hidden = false; active = -1;
     activate(0);
@@ -267,6 +270,17 @@
     if ((e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) && radial.hidden && !e.target.closest?.("textarea, input")) { e.preventDefault(); open(innerWidth / 2, innerHeight / 2, true); }
   });
   addEventListener("resize", close);
+  // A press that becomes a scroll or drag should never open the menu on touchscreens.
+  let pressTimer = 0, pressX = 0, pressY = 0;
+  const cancelPress = () => { clearTimeout(pressTimer); pressTimer = 0; };
+  document.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "touch" || e.target.closest?.("button, input, textarea, canvas, [contenteditable], .radial, .dock, .notch")) return;
+    pressX = e.clientX; pressY = e.clientY;
+    pressTimer = setTimeout(() => { open(pressX, pressY, false); pressTimer = 0; }, 550);
+  });
+  document.addEventListener("pointermove", (e) => { if (Math.hypot(e.clientX - pressX, e.clientY - pressY) > 12) cancelPress(); });
+  document.addEventListener("pointerup", cancelPress);
+  document.addEventListener("pointercancel", cancelPress);
 
   /* ================= STATION READOUTS ================= */
   const HUD_STATE = { idle: "Orbit stable", listening: "Receiving voice", thinking: "Layers working", speaking: "Transmitting" };

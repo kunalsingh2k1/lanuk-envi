@@ -20,6 +20,7 @@
 
 <header class="telemetry">
   <div class="mark"><span class="mark-name">ENVI</span><span class="mark-sub">Lanuk Office</span></div>
+  <div class="voice-control"><span class="voice-status" id="voiceStatus" role="status">Voice activation is off</span><button type="button" class="voice-toggle" id="wakeBtn" aria-pressed="false" aria-describedby="voiceStatus" title="Enable the microphone, then say Hi Envi followed by your request">Enable voice</button></div>
   <ul class="tele" aria-label="System status">
     <li><span class="k">Link</span><span class="v" id="tLink">—</span></li>
     <li><span class="k">Last reply</span><span class="v" id="tMs">—</span></li>
@@ -49,20 +50,22 @@
     <div class="core">
       <div class="holo">
         <div class="dial" id="holoBox">
-          <img class="ship-art" src="/assets/flight-deck.png" alt="Cyan holographic ring spacecraft above Earth’s orbital horizon">
-          <button type="button" class="inspect-ship" id="inspectShip" aria-pressed="false">Inspect 3D</button>
-          <canvas id="holo" tabindex="0" role="img" aria-label="Envi station hologram. Drag or use the arrow keys to turn it."></canvas>
+          <canvas id="holo" tabindex="0" role="img" aria-label="Interactive 3D Envi ship. Drag or use arrow keys to orbit. Scroll or use plus and minus to zoom. Home resets the view."></canvas>
+          <div class="ship-controls" role="group" aria-label="3D ship controls"><button type="button" id="shipPin" aria-pressed="false">Show ship</button><button type="button" id="shipReset">Reset view</button><button type="button" id="shipMotion" aria-pressed="true">Motion on</button><button type="button" id="shipLayers" aria-pressed="false">Explore layers</button><button type="button" id="shipZoomOut" aria-label="Zoom out">−</button><button type="button" id="shipZoomIn" aria-label="Zoom in">+</button></div>
           <div class="hud hud-tl" aria-hidden="true"><b>ENVI-01</b><span id="hudState">Orbit stable</span></div>
           <div class="hud hud-tr" aria-hidden="true"><span>Yaw <i id="hudYaw">000</i>°</span><span>Pitch <i id="hudPitch">+00</i>°</span><span>Layers <i id="hudLayers">00</i>%</span></div>
-          <div class="hud hud-bl" aria-hidden="true">Drag to turn · double-click to reset</div>
+          <div class="hud hud-bl" aria-hidden="true">Drag to orbit · scroll to zoom · double-click to reset</div>
           <div class="holo-mode"><span id="mode">Standby</span></div>
         </div>
-        <dl class="callouts" aria-label="Key numbers">
-          <div class="callout c-tl"><dt>Launch</dt><dd id="coLaunch">—</dd></div>
-          <div class="callout c-bl"><dt>Missions</dt><dd id="coMissions">—</dd></div>
-          <div class="callout c-tr"><dt>Model</dt><dd id="coModel">—</dd></div>
-          <div class="callout c-br hot"><dt>AI stack</dt><dd id="coCost">—</dd></div>
-        </dl>
+        <div class="deck-strip">
+          <dl class="callouts" aria-label="Key numbers">
+            <div class="callout c-tl"><dt>Launch</dt><dd id="coLaunch">—</dd></div>
+            <div class="callout c-bl"><dt>Missions</dt><dd id="coMissions">—</dd></div>
+            <div class="callout c-tr"><dt>Model</dt><dd id="coModel">—</dd></div>
+            <div class="callout c-br hot"><dt>AI stack</dt><dd id="coCost">—</dd></div>
+          </dl>
+          <div class="voice-line" aria-hidden="true"><span class="voice-tag" id="voiceTag">Voice</span><canvas id="voiceLine"></canvas></div>
+        </div>
       </div>
       <h1 class="greet" id="greet">Good evening, Kunal.</h1>
       <p class="sub" id="ticker">Bringing systems online…</p>
@@ -97,7 +100,6 @@
       <div class="cmd-foot">
         <span id="hint">Instant read-outs use no model. Everything else goes to the model shown.</span>
         <span class="foot-actions">
-          <button type="button" class="link-btn" id="wakeBtn" aria-pressed="false" hidden title="Say “Hi Envi” to start talking while this page is open">“Hi Envi” off</button>
           <button type="button" class="link-btn" id="voiceBtn" aria-pressed="false" hidden>Voice off</button>
           <button type="button" class="link-btn" id="stopBtn" hidden>Stop</button>
           <button type="button" class="link-btn" id="newBtn">New chat</button>
@@ -164,6 +166,7 @@
 </main>
 
 <script src="/hologram.js"></script>
+<script src="/voiceline.js"></script>
 <script src="/app.js"></script>
 <script src="/chrome.js"></script>
 </body>
