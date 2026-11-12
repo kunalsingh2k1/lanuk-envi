@@ -5,6 +5,18 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Motion system across the whole interface
+
+- **Asked:** use prompt-motion.com to add motion across the system. The site is a gallery of motion videos and
+  prompts made with Claude (no library, no install, no licence), so the motion was built in code as an original
+  system in that spirit (Kunal chose "use it as inspiration").
+- **Changed:** new `web/motion.css` (tokens, tab and list cascades, press/hover, shimmer, breathing Send,
+  message entrances, mission strike-through, reduced-motion off-switch) and `web/motion.js` (change glow).
+- **Verified:** stylesheet loads; `m-rise` runs on tab open and settles to opacity 1; mid-animation and
+  settled screenshots of Missions; change glow fires; 761x906 with no page scroll; smoke test 7/7; no console errors.
+- **Not verified:** the real "reduce motion" OS setting; frame rate on a slower PC.
+- **Hermes:** not changed (Kunal chose to keep it on local Ollama). Options for Claude later are in the brain.
+
 ## 2026-11-12 · Claude · GitHub MCP server added (read-only)
 
 - **Changed:** `mcp-servers.json` has `github` at `https://api.githubcopilot.com/mcp/readonly` (GitHub

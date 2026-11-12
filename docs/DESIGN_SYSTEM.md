@@ -1,6 +1,22 @@
 # Design system
 
-## Star system · 2026-11-12 (current)
+## Motion system · 2026-11-12 (`web/motion.css`, `web/motion.js`, loaded last)
+
+One set of timings for the whole interface. Tokens: `--ease-out` (arrive), `--ease-in` (leave),
+`--ease-io` (loops), `--dur-1` 120ms (press), `--dur-2` 240ms (hover), `--dur-3` 480ms (panels), `--stagger` 45ms.
+Only transform, opacity, filter and box-shadow animate.
+
+- **Tab opens:** its panels rise in one after another; list rows (agents, missions, memory files, chats) cascade.
+  The stage and sky stay still.
+- **Every button/chip/row:** same hover, and a press that shrinks it slightly. Panels brighten their edge on hover.
+- **A read-out changes** (key numbers, System panel, route chip, badges, gauges): a short glow (`.tick`,
+  added by `motion.js`, which only toggles that class and skips first load and "—").
+- **Waiting:** placeholders shimmer; Send breathes while Envi works. New messages slide in from their side.
+- **Missions:** ticking one draws the strike-through. Tab icons nudge on hover and pop when selected.
+- **Reduced motion:** everything above is off. The idea source was the gallery at prompt-motion.com (a set of
+  motion prompts, not code); nothing was copied from it.
+
+## Star system · 2026-11-12
 
 **Update, same day: the core.** At rest the stage centre is the "second brain" (file nodes in
 folder-coloured particle clusters inside a ticked ring, agents on the ring). Listening is an amber

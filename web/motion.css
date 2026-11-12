@@ -1,0 +1,83 @@
+/* Envi motion system (2026-11-12). One set of timings and curves for every part of the interface.
+   Style: quick, confident, a little light; things arrive on a soft curve and leave faster.
+   Only transform, opacity, filter and box-shadow animate. Loaded last. Reduced motion turns it all off.
+   Inspiration: the motion-design prompts gathered at prompt-motion.com (ideas only, nothing copied). */
+:root {
+  --ease-out: cubic-bezier(.16, 1, .3, 1);       /* arrive: fast start, long settle */
+  --ease-in: cubic-bezier(.5, 0, .9, .4);        /* leave: quick */
+  --ease-io: cubic-bezier(.65, 0, .35, 1);       /* loops and sweeps */
+  --dur-1: 120ms;                                /* press, colour */
+  --dur-2: 240ms;                                /* hover, small reveals */
+  --dur-3: 480ms;                                /* panels and tabs arriving */
+  --stagger: 45ms;                               /* gap between siblings arriving */
+}
+
+/* ---- a tab opens: its panels rise in one after another ---- */
+@keyframes m-rise { from { opacity: 0; transform: translateY(14px) scale(.992); } }
+@keyframes m-fade { from { opacity: 0; } }
+.view:not([hidden]) > * { animation: m-rise var(--dur-3) var(--ease-out) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+.view:not([hidden]) > *:nth-child(1) { --i: 0; } .view:not([hidden]) > *:nth-child(2) { --i: 1; }
+.view:not([hidden]) > *:nth-child(3) { --i: 2; } .view:not([hidden]) > *:nth-child(4) { --i: 3; }
+.view:not([hidden]) > *:nth-child(5) { --i: 4; }
+/* the stage and the sky stay still; only content around them moves */
+.v-console > .core { animation-name: m-fade; }
+/* rows inside lists arrive in a cascade */
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > * { animation: m-rise var(--dur-3) var(--ease-out) both; animation-delay: calc(var(--r, 0) * 30ms + 120ms); }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(-n+10) { --r: 0; }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(2) { --r: 1; }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(3) { --r: 2; }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(4) { --r: 3; }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(5) { --r: 4; }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(6) { --r: 5; }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(n+7) { --r: 6; }
+.view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > :nth-child(1) { --r: 0; }
+
+/* ---- every button, chip and field answers the pointer the same way ---- */
+:where(button, .opt, .mem-file, .read-item, .chip, summary) { transition: transform var(--dur-2) var(--ease-out), background-color var(--dur-2), border-color var(--dur-2), color var(--dur-2), box-shadow var(--dur-2); }
+:where(button, .opt, .mem-file, .read-item, .chip):not(:disabled):active { transform: scale(.965); transition-duration: var(--dur-1); }
+.v-console .quick button:not(:disabled):active, .provider-row button:not(:disabled):active, .apps-btn:not(:disabled):active, .ship-controls button:not(:disabled):active { transform: scale(.95); }
+.send:not(:disabled):active { transform: translateY(1px) scale(.97) !important; }
+.mem-file:hover, .read-item:hover { transform: translateX(3px); }
+.mem-file[aria-pressed="true"] { transform: translateX(6px); }
+
+/* ---- panels brighten their edge when you point at them ---- */
+.rail-box, .glass, .v-console .console { transition: border-color var(--dur-3) var(--ease-out), box-shadow var(--dur-3) var(--ease-out); }
+.rail-box:hover, .glass:hover, .v-console .console:focus-within { border-color: rgba(143, 230, 255, .3); box-shadow: 0 0 0 1px rgba(143, 230, 255, .08), 0 18px 50px -28px rgba(143, 230, 255, .4); }
+
+/* ---- a number or status that changes gives a short glow, so you notice it ---- */
+@keyframes m-tick { 0% { text-shadow: 0 0 0 transparent; filter: brightness(1); } 25% { text-shadow: 0 0 14px currentColor; filter: brightness(1.7); } 100% { text-shadow: 0 0 0 transparent; filter: brightness(1); } }
+.tick { animation: m-tick 900ms var(--ease-out); }
+.route.tick { animation: m-route 700ms var(--ease-out); }
+@keyframes m-route { 30% { box-shadow: 0 0 0 4px rgba(255, 188, 56, .22), 0 0 18px -2px rgba(255, 188, 56, .6); } }
+
+/* ---- waiting: placeholders shimmer, Send breathes while Envi works ---- */
+@keyframes m-shimmer { to { background-position: -200% 0; } }
+.placeholder { background: linear-gradient(100deg, currentColor 30%, #fff 50%, currentColor 70%) 100% 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--ice-dim); animation: m-shimmer 2.2s var(--ease-io) infinite; }
+@keyframes m-breathe { 50% { box-shadow: 0 0 26px -2px var(--glow-a), inset 0 1px 0 rgba(255, 255, 255, .55); filter: saturate(.7) brightness(1.1); } }
+.v-console .composer .send:disabled { animation: m-breathe 1.6s var(--ease-io) infinite; opacity: .75; }
+
+/* ---- messages: the newest slides in from its own side ---- */
+@keyframes m-in-l { from { opacity: 0; transform: translate(-12px, 6px); } }
+@keyframes m-in-r { from { opacity: 0; transform: translate(12px, 6px); } }
+.v-console .msg.j { animation: m-in-l var(--dur-3) var(--ease-out) both; }
+.v-console .msg.u { animation: m-in-r var(--dur-3) var(--ease-out) both; }
+
+/* ---- tabs in the notch, the dock and the radial menu already move; give the tab icons a nudge ---- */
+.notch .tabs button svg { transition: transform var(--dur-2) var(--ease-out); }
+.notch .tabs button:hover svg { transform: translateY(-2px) scale(1.12); }
+.notch .tabs button[aria-selected="true"] svg { animation: m-pop var(--dur-3) var(--ease-out); }
+@keyframes m-pop { 40% { transform: scale(1.3) rotate(-8deg); } }
+
+/* ---- missions: ticking one strikes it through ---- */
+.mission .t { background: linear-gradient(var(--holo), var(--holo)) 0 58% / 0% 1.5px no-repeat; transition: background-size var(--dur-3) var(--ease-out), opacity var(--dur-3); text-decoration: none; }
+.mission.done .t { background-size: 100% 1.5px; text-decoration: none; }
+
+/* ---- Google/Apps pills ---- */
+.apps-btn[aria-pressed="true"] svg { animation: m-pop var(--dur-3) var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .view:not([hidden]) > *, .view:not([hidden]) :is(.agents, .clients, .missions, .mem-files, .chats, .hbars) > *,
+  .v-console .msg, .tick, .route.tick, .placeholder, .v-console .composer .send:disabled, .notch .tabs button[aria-selected="true"] svg, .apps-btn svg { animation: none !important; }
+  .placeholder { -webkit-text-fill-color: currentColor; background: none; }
+  :where(button, .opt, .mem-file, .read-item, .chip), .mem-file:hover, .read-item:hover { transition: none; transform: none !important; }
+}
