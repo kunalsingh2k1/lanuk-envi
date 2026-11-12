@@ -249,16 +249,80 @@
     if (e.key === "/" && tag !== "TEXTAREA" && tag !== "INPUT") { e.preventDefault(); $("#input").focus(); }
   });
 
-  /* ---------- voice (browser built-ins) ---------- */
+  /* ---------- voice: Envi's local voice first, the browser's voice as a fallback ---------- */
+  // Local voice = Voice Studio (Kokoro) on this PC, asked through /api/speak. Audio never leaves the PC.
   const synth = window.speechSynthesis;
-  if (synth) {
-    const vb = $("#voiceBtn"); vb.hidden = false;
-    const paint = () => { vb.setAttribute("aria-pressed", String(voiceOut)); vb.textContent = voiceOut ? "Voice on" : "Voice off"; };
-    paint();
-    vb.addEventListener("click", () => { voiceOut = !voiceOut; store.set("envi.voice", voiceOut); if (!voiceOut) synth.cancel(); paint(); });
+  let localUp = null, localOff = 0, speakToken = 0, localAudio = null, localPlaying = false, meter = null;
+  const isSpeaking = () => localPlaying || !!synth?.speaking;
+  const voiceBtn = $("#voiceBtn");
+  voiceBtn.hidden = false;
+  const paintVoice = () => { voiceBtn.setAttribute("aria-pressed", String(voiceOut)); voiceBtn.textContent = voiceOut ? (localUp ? "Voice on · local" : "Voice on") : "Voice off"; voiceBtn.title = localUp ? "Spoken replies use the local voice (Voice Studio, Kokoro)" : "Spoken replies use the browser's voice. Start Voice Studio for the local voice."; };
+  async function checkLocalVoice() { try { localUp = !!(await api("/api/speak/status")).up; } catch { localUp = false; } paintVoice(); }
+  voiceBtn.addEventListener("click", () => { voiceOut = !voiceOut; store.set("envi.voice", voiceOut); if (!voiceOut) stopSpeech(); paintVoice(); if (voiceOut) checkLocalVoice(); });
+  paintVoice(); checkLocalVoice();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkLocalVoice(); });
+
+  function stopSpeech() {
+    speakToken++; synth?.cancel();
+    if (localAudio) { try { localAudio.pause(); } catch {} localAudio = null; }
+    localPlaying = false; if (meter) { cancelAnimationFrame(meter); meter = null; }
   }
+  // sentence-sized pieces, so the first words start quickly and each request stays short
+  const chunksOf = (text) => {
+    const out = []; let cur = "";
+    for (const part of text.replace(/\s+/g, " ").trim().split(/(?<=[.!?])\s+/)) {
+      if (cur && (cur + " " + part).length > 260) { out.push(cur); cur = part; } else cur = cur ? cur + " " + part : part;
+    }
+    if (cur) out.push(cur);
+    return out.slice(0, 8);
+  };
+  const fetchWav = async (text) => {
+    const r = await fetch("/api/speak", { method: "POST", headers: { "content-type": "application/json", "x-envi": "1" }, body: JSON.stringify({ text }) });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw Object.assign(new Error(j.error?.message || `Voice answered ${r.status}`), { code: j.error?.code }); }
+    return URL.createObjectURL(await r.blob());
+  };
+  // The real audio level drives the core and the voice line while the local voice talks.
+  function startMeter(audio) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)(), src = ctx.createMediaElementSource(audio), an = ctx.createAnalyser(); an.fftSize = 512;
+      src.connect(an); an.connect(ctx.destination);
+      const buf = new Uint8Array(an.fftSize);
+      const tick = () => { an.getByteTimeDomainData(buf); let sum = 0; for (const v of buf) { const d = (v - 128) / 128; sum += d * d; } window.Holo?.pulse(Math.min(1, Math.sqrt(sum / buf.length) * 5)); meter = requestAnimationFrame(tick); };
+      tick(); audio.addEventListener("ended", () => ctx.close().catch(() => {}), { once: true });
+    } catch {}
+  }
+  async function sayLocal(text, token) {
+    const chunks = chunksOf(text); if (!chunks.length) return;
+    let next = fetchWav(chunks[0]);
+    for (let i = 0; i < chunks.length; i++) {
+      const url = await next;
+      if (token !== speakToken) { URL.revokeObjectURL(url); return; }
+      if (i + 1 < chunks.length) next = fetchWav(chunks[i + 1]);   // prepare the next piece while this one plays
+      await new Promise((resolve) => {
+        const a = new Audio(url); localAudio = a;
+        a.onplay = () => { localPlaying = true; setMode("speaking"); $("#stopBtn").hidden = false; window.Holo?.caption(chunks[i].split(" ").slice(-7).join(" ")); if (!meter) startMeter(a); };
+        a.onended = a.onerror = () => { URL.revokeObjectURL(url); if (meter) { cancelAnimationFrame(meter); meter = null; } resolve(); };
+        a.play().catch(resolve);
+      });
+      if (token !== speakToken) return;
+    }
+  }
+  function endSpeech() { localPlaying = false; if (window.Holo?.mode === "speaking") setMode("idle"); if (!ctl) $("#stopBtn").hidden = true; }
   function say(text) {
-    if (!synth || !voiceOut || !text) return;
+    if (!voiceOut || !text) return;
+    stopSpeech();
+    const token = speakToken;
+    if (localUp !== false || Date.now() > localOff) {
+      sayLocal(text, token).then(() => { if (token === speakToken) endSpeech(); }).catch((e) => {
+        if (token !== speakToken) return;
+        localUp = false; localOff = Date.now() + 60_000; paintVoice(); endSpeech();
+        emit("event", { kind: "voice", text: "Local voice unavailable, using the browser voice" });
+        sayBrowser(text);
+      });
+    } else sayBrowser(text);
+  }
+  function sayBrowser(text) {
+    if (!synth) return;
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text.slice(0, 1800));
     const v = synth.getVoices().find((x) => /en-GB/i.test(x.lang) && /male|george|ryan|daniel/i.test(x.name)) || synth.getVoices().find((x) => /en-(GB|IN)/i.test(x.lang));
@@ -308,7 +372,7 @@
       const w = new SR(); w.lang = "en-IN"; w.interimResults = true; w.continuous = true;
       w.onstart = () => reportVoice('Listening for “Hi Envi”');
       w.onresult = (e) => {
-        if (ctl || synth?.speaking) return;                 // don't let Envi's own voice wake it
+        if (ctl || isSpeaking()) return;                 // don't let Envi's own voice wake it
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const rest = afterWake(e.results[i][0].transcript);
           if (rest === null) continue;
@@ -345,7 +409,7 @@
   async function send(text) {
     input.value = ""; grow();
     addMsg("u", text);
-    synth?.cancel();
+    stopSpeech();
     turns.push({ role: "user", content: text });
     const node = addMsg("j", "", "connecting…"); node.li.classList.add("pending");
     ctl = new AbortController(); const mine = ctl;
@@ -391,11 +455,11 @@
     } finally {
       node.li.classList.remove("pending");
       if (ctl === mine) ctl = null;
-      $("#sendBtn").disabled = false; if (!synth?.speaking) $("#stopBtn").hidden = true;
+      $("#sendBtn").disabled = false; if (!isSpeaking()) $("#stopBtn").hidden = true;
     }
   }
 
-  $("#stopBtn").addEventListener("click", () => { ctl?.abort(); synth?.cancel(); $("#stopBtn").hidden = true; });
+  $("#stopBtn").addEventListener("click", () => { ctl?.abort(); stopSpeech(); if (window.Holo?.mode === "speaking") setMode("idle"); $("#stopBtn").hidden = true; });
   $("#newBtn").addEventListener("click", () => { ctl?.abort(); turns = []; conversationId = null; log.replaceChildren(); addMsg("j", "New conversation. What do you need?"); input.focus(); });
   document.querySelectorAll("[data-local]").forEach((b) => b.addEventListener("click", () => {
     if (!state) return;

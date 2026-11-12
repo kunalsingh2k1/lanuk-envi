@@ -14,6 +14,7 @@ import { logExchange, saveNote } from "./vault.js";
 import { listMemory, readMemoryFile, contextSources } from "./memory.js";
 import { APPS_RULES, appsStatus, runTool, onToolUse, mcpTools } from "./connectors.js";
 import * as google from "./google.js";
+import * as tts from "./tts.js";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 
@@ -65,6 +66,15 @@ app.patch("/api/missions/:id", async (c) => {
 });
 
 app.get("/api/stats", async (c) => c.json({ replies: await store.recentReplies() }));
+
+// ---- local voice: Voice Studio makes the audio (see server/tts.js) ----
+app.get("/api/speak/status", async (c) => c.json(await tts.status()));
+app.post("/api/speak", async (c) => {
+  const { text, voice } = await c.req.json().catch(() => ({}));
+  if (!text || typeof text !== "string") return c.json({ error: { code: "bad_request", message: "Nothing to say." } }, 400);
+  try { return new Response(await tts.speak(text, { voice: typeof voice === "string" && /^[A-Za-z0-9_-]{1,40}$/.test(voice) ? voice : undefined }), { headers: { "content-type": "audio/wav", "cache-control": "no-store" } }); }
+  catch (e) { return c.json({ error: { code: e.code || "voice_error", message: e.message } }, e.code === "voice_unavailable" ? 503 : 500); }
+});
 
 // ---- apps: Envi's own Google sign-in and the connector hub (read + drafts) ----
 app.get("/api/apps", async (c) => c.json(await appsStatus()));

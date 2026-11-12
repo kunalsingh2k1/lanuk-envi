@@ -75,6 +75,7 @@ All routes are under `/api`. Every non-GET request must carry the header `x-envi
 | `GET /api/conversations`, `GET /api/conversations/:id` | Saved chats |
 | `POST /api/obsidian/save` | Body `{title, content, provider, model}`. Writes a note. |
 | `POST /api/chat` | Body `{provider, model, conversationId, messages, apps}`. Streams Server-Sent Events: `meta` (with `sources`), `thinking`, `text`, `tool` (an app step, with a plain label), `done`, `error`. `apps` works for every provider. |
+| `POST /api/speak`, `GET /api/speak/status` | Envi's local voice. `speak` takes `{text}` and returns WAV made by Voice Studio (`server/tts.js`, default Kokoro `af_heart`); `status` says whether Voice Studio is up. 503 when it is off; the page then uses the browser voice. |
 | `GET /api/apps` | Access level (read + drafts), Google connection status and the hub's tools. |
 | `GET /api/google/connect`, `GET /oauth/google/callback`, `POST /api/google/disconnect` | Envi's own Google sign-in. |
 | `envi/mcp-servers.json` | MCP servers Envi connects to (local programs or web URLs). Only tools in each server's `allow` list join the hub, named `<server>__<tool>`. Keys as `${NAME}` from `.env`. `npm run mcp [-- name]` lists them. Client: `server/mcp-client.js`. |

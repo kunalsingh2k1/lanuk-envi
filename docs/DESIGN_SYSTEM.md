@@ -1,5 +1,12 @@
 # Design system
 
+## Spoken replies · 2026-11-12
+
+"Voice on" now uses the local voice: Voice Studio (Kokoro) makes the audio on this PC and the page plays it
+sentence by sentence. The voice line and the core follow the real audio level; the last words appear and fly
+under the core. The button reads "Voice on · local" (or "Voice on" for the browser voice). If Voice Studio is
+off or fails, Envi says so in the Events feed and uses the browser voice for that reply (retries after 60 s).
+
 ## Motion system · 2026-11-12 (`web/motion.css`, `web/motion.js`, loaded last)
 
 One set of timings for the whole interface. Tokens: `--ease-out` (arrive), `--ease-in` (leave),

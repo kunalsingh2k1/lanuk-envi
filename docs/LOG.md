@@ -5,6 +5,20 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Envi speaks with the local voice (Voice Studio)
+
+- **Asked:** connect Envi's spoken replies to the voice tool installed today (`C:\AI TOOLSoice-studio`).
+- **Changed:** new `server/tts.js` (asks Voice Studio, makes sure Kokoro is loaded, strips links/code/emoji) and
+  routes `POST /api/speak`, `GET /api/speak/status`. `web/app.js`: spoken replies try the local voice first,
+  in sentence-sized pieces with the next one prepared while the current plays; real audio level drives the core and
+  voice line; browser voice is the fallback. Button shows "Voice on · local". Wake-phrase "am I speaking" check now
+  covers local audio. Optional `.env` names: `VOICE_STUDIO_URL`, `_ENGINE`, `_VOICE`.
+- **Verified:** `/api/speak` returned 6.7 s of real audio in 0.44 s with markdown and a link stripped; 403 without the
+  header; in the page the status read-out was spoken through the local voice (one request, core went to speaking, back
+  to idle); with the voice forced to fail, the browser voice took over and the feed said so; smoke test 7/7; no console errors.
+- **Not verified:** how it sounds to a person; a long reply (8 pieces max, about 1,800 characters); Voice Studio is not
+  started automatically, so after a restart the first spoken reply falls back to the browser voice until it is running.
+
 ## 2026-11-12 · Claude · Hermes now uses Claude (outside this repo)
 
 - Kunal made a Claude plan token and added it to Hermes' `.env` himself. Hermes: logged in to Anthropic;
