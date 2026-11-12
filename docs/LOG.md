@@ -5,6 +5,23 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Second-brain core, reactions, flying words, voice wave
+
+- **From:** Kunal's two reference videos in `C:\AI OFFICE\Context\` and a cyan voice-wave image.
+- **Changed (`web/hologram.js`, "THE CORE"):** at rest the middle is a "second brain": a turning cloud
+  of 3,600 particles in folder-coloured clusters, every vault file a bright node, agents on a ticked
+  ring with their state, "memory · N files · N clusters" below. Files read for a reply come forward
+  with readable labels. Listening: amber sphere. Thinking: violet ribbons. Speaking: violet sphere,
+  and words fly out of it and land as a caption (`Holo.caption`, fed by `app.js` from the stream and
+  from speech boundaries). A cyan bar-and-strand voice wave runs across the middle in every state.
+  The ship now opens only from "Show ship" or "Explore layers". On the console the sky no longer
+  repeats the file stars (they live in the brain); the Memory tab keeps the constellation.
+- **Verified:** smoke test, syntax; each state forced in the browser; caption flight and landing;
+  sources flying in; brain fits the stage at 1440x900; no page scroll.
+- **Not verified:** words from a real streamed reply. Two local qwen3.5:4b requests during the test
+  returned an empty answer or ran past two minutes (the second was stopped); the UI showed the error
+  and the stop correctly. Real microphone and spoken replies also not tested.
+
 ## 2026-11-12 · Claude · Comms deck: futuristic chat and controls
 
 - **Changed:** last section of `web/holo.css` ("Comms deck"). Chat panel is glass with a light-split

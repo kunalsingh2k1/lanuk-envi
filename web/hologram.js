@@ -212,66 +212,221 @@
     out[o] = CX + X * S * d; out[o + 1] = CY + (yy * cpt - Z * spt) * S * d;
   }
 
-  /* ================= PARTICLE FACE ================= */
-  // After the "Your Jarvis needs a face" reference. At rest the particles form the Envi star.
-  // Listening: an amber sphere that swells with the voice. Speaking: a violet sphere that ripples
-  // with each word. Working: they stream outward and hand over to the ship.
-  const NP = 2400, PP = new Float32Array(NP * 3), STAR = new Float32Array(NP * 3), SPH = new Float32Array(NP * 3), PK = new Float32Array(NP);
+  /* ================= THE CORE ================= */
+  // The middle of the stage, after Kunal's two reference videos.
+  // Rest: the "second brain". A slowly turning cloud of particles inside a ticked ring; every vault
+  //   file is a bright node in its folder's cluster, and the agents sit on the ring. A file that Envi
+  //   reads comes forward into the centre with its name.
+  // Listening: an amber sphere that swells with the voice. Thinking: violet ribbons of particles.
+  // Speaking: a violet sphere that ripples with each word; the words fly out of it and land below.
+  // A cyan voice wave runs straight across the middle of the circle and moves with the voice.
+  const NP = 3600, PP = new Float32Array(NP * 3), BR = new Float32Array(NP * 3), SPH = new Float32Array(NP * 3);
+  const PK = new Float32Array(NP), PU = new Float32Array(NP), PC = new Uint8Array(NP);
+  const PAL = [[150, 255, 170], [255, 226, 120], [143, 230, 255], [255, 150, 210], [236, 242, 255], [198, 166, 255]];
+  const FOLDER = { Root: [255, 233, 196], Clients: [255, 188, 56], Envi: [143, 230, 255], Agents: [198, 166, 255] };
+  const ball = (r) => { let x, y, z; do { x = rnd() * 2 - 1; y = rnd() * 2 - 1; z = rnd() * 2 - 1; } while (x * x + y * y + z * z > 1); return [x * r, y * r, z * r]; };
   for (let i = 0; i < NP; i++) {
-    const u = rnd(), v = rnd(), w = rnd(); let x, y, z = (rnd() - 0.5) * 0.08;
-    if (i < NP * 0.46) {                      // the four long points
-      const k = i % 4, a = (k * Math.PI) / 2, d = Math.pow(u, 1.7), wd = (1 - d) * 0.075 * (v - 0.5) * 2 * Math.sqrt(w);
-      x = Math.cos(a) * d - Math.sin(a) * wd; y = Math.sin(a) * d + Math.cos(a) * wd;
-    } else if (i < NP * 0.56) {               // four short diagonal points
-      const k = i % 4, a = (k * Math.PI) / 2 + Math.PI / 4, d = Math.pow(u, 1.6) * 0.38, wd = (1 - d / 0.38) * 0.03 * (v - 0.5) * 2;
-      x = Math.cos(a) * d - Math.sin(a) * wd; y = Math.sin(a) * d + Math.cos(a) * wd;
-    } else if (i < NP * 0.9) {                // bright core
-      const a = u * TAU, r = 0.17 * Math.sqrt(-2 * Math.log(v + 1e-6)) * 0.55;
-      x = Math.cos(a) * r; y = Math.sin(a) * r; z = (w - 0.5) * r;
-    } else {                                  // a faint ring, the old circle core
-      const a = u * TAU, r = 0.62 + (v - 0.5) * 0.05; x = Math.cos(a) * r; y = Math.sin(a) * r;
-    }
-    STAR.set([x, y, z], i * 3);
     const yy = 1 - (2 * (i + 0.5)) / NP, rr = Math.sqrt(1 - yy * yy), th = i * 2.39996323;   // even points on a sphere
     SPH.set([Math.cos(th) * rr, yy, Math.sin(th) * rr], i * 3);
-    PP.set([x * 0.2, y * 0.2, z], i * 3); PK[i] = 0.04 + rnd() * 0.07;
+    const b = ball(0.8 * Math.pow(rnd(), 0.75)); BR.set(b, i * 3); PP.set([b[0] * 0.3, b[1] * 0.3, b[2] * 0.3], i * 3);
+    PK[i] = 0.035 + rnd() * 0.07; PU[i] = rnd() * TAU; PC[i] = (rnd() * PAL.length) | 0;
   }
-  const FC = { star: [255, 236, 200], listening: [255, 186, 72], speaking: [226, 140, 236], thinking: [140, 210, 255] };
-  let fcol = [...FC.star], faceVis = 0;
-  const PB = [new Path2D(), new Path2D(), new Path2D()];
+  // memory nodes: one per file, placed in its folder's cluster; brain particles gather round them
+  let NODES = [], clusters = 0;
+  function setFiles(files) {
+    const folders = [...new Set(files.map((f) => f.folder))].sort(); clusters = folders.length;
+    const centre = {};
+    folders.forEach((fo, k) => { const yy = 1 - (2 * (k + 0.5)) / folders.length, rr = Math.sqrt(1 - yy * yy), th = k * 2.39996323 + 0.6; centre[fo] = [Math.cos(th) * rr * 0.48, yy * 0.42, Math.sin(th) * rr * 0.48]; });
+    const old = new Map(NODES.map((n) => [n.id, n]));
+    NODES = files.map((fl) => {
+      const c = centre[fl.folder], o = ball(0.13), p = [c[0] + o[0], c[1] + o[1], c[2] + o[2]];
+      return Object.assign(old.get(fl.id) || { cur: p.slice(), k: 0, focusUntil: 0 }, { id: fl.id, name: fl.name.replace(/\.md$/, ""), folder: fl.folder, col: FOLDER[fl.folder] || PAL[2], home: p, links: fl.links || [] });
+    });
+    // 55% of the cloud forms the folder clusters, in the folder colour; the rest stays a loose mixed cloud
+    for (let i = 0; i < NP; i++) {
+      if (i % 20 < 11 && folders.length) {
+        const fo = folders[i % folders.length], c = centre[fo], o = ball(0.27 * Math.pow(rnd(), 0.8));
+        BR.set([c[0] + o[0], c[1] + o[1], c[2] + o[2]], i * 3);
+        const fc = FOLDER[fo]; PC[i] = fc ? [Object.keys(FOLDER).indexOf(fo)].map((k) => [4, 1, 2, 5][k] ?? 0)[0] : (i % PAL.length);
+      }
+    }
+  }
+  document.addEventListener("envi:memory", (e) => setFiles(e.detail || []));
+  if (window.Sky?.files?.length) setFiles(window.Sky.files);
+  document.addEventListener("envi:sources", (e) => {
+    const now = performance.now();
+    for (const n of NODES) if ((e.detail || []).includes(n.id)) n.focusUntil = now + 10000;
+  });
+
+  // ribbons for thinking: each particle rides one of six looping curves
+  const ribbon = (i, out) => {
+    const r = i % 6, u = PU[i] + t * (0.35 + r * 0.04), ph = r * 1.05, a = 1 + (r % 3), b = 2 + (r % 2);
+    out[0] = Math.sin(u * a + ph) * 0.95; out[1] = Math.sin(u * b + ph * 0.7 + t * 0.6) * 0.42 * Math.cos(u * 0.5 + t * 0.2); out[2] = Math.cos(u * a + ph) * 0.45;
+  };
+  const MODE_COL = { listening: [255, 186, 72], thinking: [176, 140, 255], speaking: [226, 140, 236] };
+  let mix = 0, faceVis = 0;
+  const mcol = [226, 140, 236], RB = [0, 0, 0];
+  const PB = PAL.map(() => [new Path2D(), new Path2D(), new Path2D()]);
+
+  /* ---- words that fly out of the sphere and land ---- */
+  const cap = { text: "", pts: null, from: null, at: 0, until: 0 };
+  const capCanvas = document.createElement("canvas"), cc = capCanvas.getContext("2d", { willReadFrequently: true });
+  function caption(text) {
+    text = String(text || "").replace(/\s+/g, " ").trim(); if (!text || text === cap.text) return;
+    const size = Math.max(14, Math.min(26, W / 34)), font = `500 ${size}px Sora, "Segoe UI", sans-serif`;
+    cc.font = font; const w = Math.min(W - 40, Math.ceil(cc.measureText(text).width) + 8), h = Math.ceil(size * 1.5);
+    capCanvas.width = w; capCanvas.height = h; cc.font = font; cc.fillStyle = "#fff"; cc.textBaseline = "middle"; cc.textAlign = "center";
+    cc.fillText(text, w / 2, h / 2, w - 8);
+    const d = cc.getImageData(0, 0, w, h).data, pts = [];
+    let step = 2; for (; ; step++) { let n = 0; for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) if (d[(y * w + x) * 4 + 3] > 128) n++; if (n < 1600 || step > 5) break; }
+    for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) if (d[(y * w + x) * 4 + 3] > 128) pts.push(x - w / 2, y - h / 2);
+    Object.assign(cap, { text, font, w, h, pts: new Float32Array(pts), from: new Float32Array(pts.length), delay: new Float32Array(pts.length / 2), at: performance.now(), until: performance.now() + 4200 });
+    for (let k = 0; k < pts.length / 2; k++) { cap.from[k * 2] = (rnd() - 0.5) * 0.7; cap.from[k * 2 + 1] = 0.55 + rnd() * 0.3; cap.delay[k] = rnd() * 260; }
+  }
+  function drawCaption(now, hub, R) {
+    if (!cap.pts) return;
+    const life = now - cap.at, fadeOut = clamp((cap.until - now) / 700); if (fadeOut <= 0) { cap.pts = null; cap.text = ""; return; }
+    const cx = hub[0], cy = Math.min(H - 26, hub[1] + R * 1.22);
+    f.fillStyle = `rgba(236,214,255,${0.85 * fadeOut})`; f.beginPath();
+    const fly = 900;
+    for (let k = 0; k < cap.delay.length; k++) {
+      const p = smooth((life - cap.delay[k]) / fly); if (p >= 1 && life > fly + 500) continue;
+      const sx = cx + cap.from[k * 2] * R, sy = hub[1] + cap.from[k * 2 + 1] * R, tx = cx + cap.pts[k * 2], ty = cy + cap.pts[k * 2 + 1];
+      const x = sx + (tx - sx) * p + Math.sin(k + t * 4) * (1 - p) * 6, y = sy + (ty - sy) * p;
+      f.rect(x - 0.7, y - 0.7, 1.4, 1.4);
+    }
+    f.fill();
+    const solid = smooth((life - fly + 150) / 450) * fadeOut;
+    if (solid > 0.01) { f.font = cap.font; f.textAlign = "center"; f.textBaseline = "middle"; f.fillStyle = `rgba(244,236,255,${solid})`; f.fillText(cap.text, cx, cy, cap.w); }
+  }
+
+  /* ---- the voice wave across the middle (Kunal's reference image) ---- */
+  let waveAmp = 0.1;
+  function voiceWave(hub, R) {
+    const target = mode === "listening" ? 0.22 + level * 0.9 : mode === "speaking" ? 0.3 + energy * 0.35 + level * 0.5 : mode === "thinking" ? 0.2 : 0.07;
+    waveAmp += (target - waveAmp) * (reduce ? 1 : 0.08);
+    const w = Math.min(W - 24, R * 3.1), x0 = hub[0] - w / 2, y0 = hub[1], A = R * 0.42 * waveAmp, n = Math.max(60, Math.floor(w / 4));
+    const ys = (u) => { const env = Math.pow(Math.sin(Math.PI * u), 1.4); return env * A * (0.65 * Math.sin(u * 15 + t * 2.6) + 0.35 * Math.sin(u * 33 - t * 4.1)); };
+    const bars = new Path2D(), dots = new Path2D();
+    for (let i = 0; i <= n; i++) {
+      const u = i / n, x = x0 + u * w, y = ys(u);
+      bars.moveTo(x, y0 - y); bars.lineTo(x, y0 + y);
+      dots.rect(x - 0.9, y0 - y - 0.9, 1.8, 1.8); dots.rect(x - 0.9, y0 + y - 0.9, 1.8, 1.8);
+    }
+    const g = f.createLinearGradient(x0, 0, x0 + w, 0);
+    g.addColorStop(0, "rgba(90,190,255,0)"); g.addColorStop(0.2, "rgba(90,190,255,0.5)"); g.addColorStop(0.5, "rgba(150,225,255,0.75)"); g.addColorStop(0.8, "rgba(90,190,255,0.5)"); g.addColorStop(1, "rgba(90,190,255,0)");
+    f.strokeStyle = g; f.lineWidth = 1; f.stroke(bars);
+    f.fillStyle = g; f.fill(dots);
+    const core = f.createLinearGradient(x0, 0, x0 + w, 0);
+    core.addColorStop(0, "rgba(160,230,255,0)"); core.addColorStop(0.5, "rgba(220,248,255,0.95)"); core.addColorStop(1, "rgba(160,230,255,0)");
+    f.fillStyle = core; f.fillRect(x0, y0 - 0.75, w, 1.5);
+    const flare = f.createRadialGradient(hub[0], y0, 0, hub[0], y0, R * 0.5);
+    flare.addColorStop(0, `rgba(150,225,255,${0.18 + waveAmp * 0.3})`); flare.addColorStop(1, "rgba(150,225,255,0)");
+    f.fillStyle = flare; f.fillRect(hub[0] - R * 0.5, y0 - R * 0.5, R, R);
+  }
+
+  /* ---- the ring round the brain, with the agents on it ---- */
+  function brainRing(hub, R, a) {
+    if (a < 0.02) return;
+    const ring = (r, a0, a1, col, w, dash) => { f.strokeStyle = col; f.lineWidth = w; f.setLineDash(dash || []); f.beginPath(); f.arc(hub[0], hub[1], r, a0, a1); f.stroke(); f.setLineDash([]); };
+    const R1 = R * 1.12, R2 = R * 1.24, tc = t * 0.18;
+    ring(R1, 0, TAU, `rgba(170,230,255,${0.22 * a})`, 1);
+    for (let i = 0; i < 120; i++) {
+      const an = (i / 120) * TAU + tc * 0.3, long = i % 10 === 0, r0 = R1 + 3, r1 = R1 + (long ? 11 : 6);
+      f.strokeStyle = `rgba(200,240,255,${(long ? 0.5 : 0.22) * a})`; f.lineWidth = 1;
+      f.beginPath(); f.moveTo(hub[0] + Math.cos(an) * r0, hub[1] + Math.sin(an) * r0); f.lineTo(hub[0] + Math.cos(an) * r1, hub[1] + Math.sin(an) * r1); f.stroke();
+    }
+    ring(R2, tc, tc + 1.1, `rgba(150,255,170,${0.85 * a})`, 2.4);
+    ring(R2, tc + Math.PI, tc + Math.PI + 0.7, `rgba(255,200,90,${0.85 * a})`, 2.4);
+    ring(R2 + 10, -tc * 0.6, -tc * 0.6 + TAU, `rgba(170,230,255,${0.14 * a})`, 1, [3, 9]);
+    // agents sit on the ring like the "Scout / Publisher" nodes in the reference
+    const agents = (window.Envi?.state?.agents || []).filter((x) => x.name);
+    const STATE = { ok: [124, 240, 180], warn: [255, 188, 56], idle: [140, 160, 175], crit: [255, 122, 107] };
+    f.font = '500 10px "IBM Plex Mono", monospace'; f.textBaseline = "middle";
+    agents.forEach((ag, i) => {
+      const an = -Math.PI * 0.85 + (i / Math.max(1, agents.length - 1)) * Math.PI * 0.7 + (i % 2 ? 0.05 : 0), c = STATE[ag.state] || STATE.idle;
+      const x = hub[0] + Math.cos(an) * R2, y = hub[1] + Math.sin(an) * R2;
+      f.strokeStyle = `rgba(${c},${0.9 * a})`; f.fillStyle = `rgba(${c},${0.18 * a})`; f.lineWidth = 1.5;
+      f.beginPath(); f.arc(x, y, 9, 0, TAU); f.fill(); f.stroke();
+      f.beginPath(); f.arc(x, y, 14, an + 0.8, an + 2.6); f.stroke();
+      const right = Math.cos(an) >= 0; f.textAlign = right ? "left" : "right";
+      f.fillStyle = `rgba(${c},${0.95 * a})`; f.fillText(ag.name.split(" ")[0].toUpperCase(), x + (right ? 20 : -20), y - 5);
+      f.fillStyle = `rgba(200,215,225,${0.6 * a})`; f.fillText(ag.label.toLowerCase(), x + (right ? 20 : -20), y + 7);
+    });
+    f.textAlign = "center"; f.fillStyle = `rgba(150,255,170,${0.85 * a})`; f.font = '600 10.5px "IBM Plex Mono", monospace';
+    f.fillText("SECOND BRAIN", hub[0], hub[1] + R2 + 22);
+    f.fillStyle = `rgba(200,215,225,${0.6 * a})`; f.font = '400 9.5px "IBM Plex Mono", monospace';
+    f.fillText(`memory · ${NODES.length} files · ${clusters} clusters`, hub[0], hub[1] + R2 + 36);
+  }
+
+  let brainFit = true;   // leave room for the ring, agents and the "second brain" caption
+  const LABELS = [];   // drawn last, on top of the glow, so they stay readable
   function face(now, hub, fe, fade) {
-    const sphere = mode === "listening" || mode === "speaking";
-    const tc = FC[sphere ? mode : fe > 0.3 ? "thinking" : "star"];
-    for (let k = 0; k < 3; k++) fcol[k] += (tc[k] - fcol[k]) * 0.06;
+    const brain = mode === "idle", sphere = mode === "listening" || mode === "speaking";
+    const tc = MODE_COL[mode] || MODE_COL.speaking;
+    for (let k = 0; k < 3; k++) mcol[k] += (tc[k] - mcol[k]) * 0.07;
+    mix += ((brain ? 0 : 1) - mix) * (reduce ? 1 : 0.05);
     faceVis += ((1 - smooth(form * 1.6)) - faceVis) * (reduce ? 1 : 0.08);
     if (faceVis < 0.01) return;
-    const R = Math.min(W, H) * 0.3 * zoom, ry = t * 0.35, cr = Math.cos(ry), sr = Math.sin(ry);
-    const wob = reduce ? 0 : Math.sin(t * 0.5) * 0.18, cw = Math.cos(wob), sw = Math.sin(wob);
+    const R = Math.min(W * 0.28, H * (brainFit ? 0.27 : 0.34)) * zoom, ry = t * (brain ? 0.12 : 0.3), cr = Math.cos(ry), sr = Math.sin(ry), tilt = brain ? 0.32 : 0.1, ct = Math.cos(tilt), st = Math.sin(tilt);
     const swell = 1 + level * 0.35 + (mode === "speaking" ? energy * 0.12 : 0), spread = 1 + smooth(form * 1.6) * 1.8;
-    for (let k = 0; k < 3; k++) PB[k] = new Path2D();
+    for (const row of PB) for (let k = 0; k < 3; k++) row[k] = new Path2D();
     for (let i = 0; i < NP; i++) {
-      const o = i * 3;
-      let tx, ty, tz;
+      const o = i * 3; let tx, ty, tz;
       if (sphere) {
         const dx = SPH[o], dy = SPH[o + 1], dz = SPH[o + 2];
         const n = 1 + 0.07 * Math.sin(dx * 4 + t * 2.1) * Math.cos(dy * 3 - t * 1.7) + (level + (mode === "speaking" ? energy * 0.2 : 0)) * 0.22 * Math.sin(dz * 6 + t * 7 + dx * 3);
-        tx = (dx * cr - dz * sr) * n * 0.82 * swell; ty = dy * n * 0.82 * swell; tz = (dx * sr + dz * cr) * n * 0.82;
-      } else {
-        const breathe = 1 + 0.04 * Math.sin(t * 1.6);
-        tx = (STAR[o] * cw - STAR[o + 2] * sw) * breathe; ty = STAR[o + 1] * breathe; tz = STAR[o] * sw + STAR[o + 2] * cw;
-      }
+        tx = dx * n * 0.82 * swell; ty = dy * n * 0.82 * swell; tz = dz * n * 0.82;
+      } else if (mode === "thinking") { ribbon(i, RB); tx = RB[0]; ty = RB[1]; tz = RB[2]; }
+      else { tx = BR[o] * (1 + 0.03 * Math.sin(t * 1.4 + i)); ty = BR[o + 1]; tz = BR[o + 2]; }
       tx *= spread; ty *= spread;
       const k = reduce ? 1 : PK[i];
       PP[o] += (tx - PP[o]) * k; PP[o + 1] += (ty - PP[o + 1]) * k; PP[o + 2] += (tz - PP[o + 2]) * k;
-      const z = PP[o + 2], d = 2.6 / (2.6 + z), x = hub[0] + PP[o] * R * d, y = hub[1] + PP[o + 1] * R * d;
-      const b = z < -0.25 ? 2 : z < 0.3 ? 1 : 0, s = 0.9 + (2 - b) * 0.0 + (b === 2 ? 0.6 : b === 1 ? 0.3 : 0);
-      PB[b].rect(x - s / 2, y - s / 2, s, s);
+      // turn, tilt, then a light perspective
+      const x1 = PP[o] * cr - PP[o + 2] * sr, z1 = PP[o] * sr + PP[o + 2] * cr, y2 = PP[o + 1] * ct - z1 * st, z2 = PP[o + 1] * st + z1 * ct;
+      const d = 2.6 / (2.6 + z2), x = hub[0] + x1 * R * d, y = hub[1] + y2 * R * d;
+      const b = z2 < -0.25 ? 2 : z2 < 0.3 ? 1 : 0, s = (b === 2 ? 1.7 : b === 1 ? 1.35 : 1) * (1 + (1 - mix) * 0.25);
+      PB[PC[i]][b].rect(x - s / 2, y - s / 2, s, s);
     }
-    const a = faceVis * fade * flick, c = fcol.map((v) => v | 0).join(",");
-    const g = f.createRadialGradient(hub[0], hub[1], 0, hub[0], hub[1], R * (sphere ? 1.1 : 0.55) * swell);
-    g.addColorStop(0, `rgba(${c},${(sphere ? 0.12 : 0.42) * a})`); g.addColorStop(1, `rgba(${c},0)`);
+    const a = faceVis * fade * flick;
+    const g = f.createRadialGradient(hub[0], hub[1], 0, hub[0], hub[1], R * 1.1 * swell);
+    const gc = brain ? "150,220,255" : mcol.map((v) => v | 0).join(",");
+    g.addColorStop(0, `rgba(${gc},${(brain ? 0.16 : 0.12) * a})`); g.addColorStop(1, `rgba(${gc},0)`);
     f.fillStyle = g; f.fillRect(hub[0] - R * 1.2 * swell, hub[1] - R * 1.2 * swell, R * 2.4 * swell, R * 2.4 * swell);
-    [0.32, 0.6, 0.95].forEach((al, k) => { f.fillStyle = `rgba(${c},${al * a})`; f.fill(PB[k]); });
+    PB.forEach((row, c) => {
+      const col = PAL[c].map((v, k) => (v + (mcol[k] - v) * mix) | 0).join(",");
+      [0.4, 0.68, 1].forEach((al, k) => { f.fillStyle = `rgba(${col},${al * a})`; f.fill(row[k]); });
+    });
+
+    // memory nodes: files glow inside their clusters; read files come forward with their names
+    const bvis = (1 - mix) * a;
+    if (bvis > 0.02 && NODES.length) {
+      const focused = NODES.filter((n) => now < n.focusUntil);
+      focused.forEach((n, i) => { const an = (i / focused.length) * TAU - Math.PI / 2; n.target = focused.length > 1 ? [Math.cos(an) * 0.5, Math.sin(an) * 0.34, -0.7] : [0, -0.28, -0.8]; });
+      const P2 = [];
+      for (const n of NODES) {
+        const fo = now < n.focusUntil; n.k += ((fo ? 1 : 0) - n.k) * (reduce ? 1 : 0.06);
+        const tgt = fo ? n.target : n.home;
+        for (let j = 0; j < 3; j++) n.cur[j] += (tgt[j] - n.cur[j]) * (reduce ? 1 : 0.06);
+        // the brain turns, but a focused node faces the viewer
+        const turn = 1 - n.k, rx = n.cur[0] * (cr * turn + n.k) - n.cur[2] * sr * turn, rz = n.cur[0] * sr * turn + n.cur[2] * (cr * turn + n.k);
+        const y2 = n.cur[1] * ct - rz * st, z2 = n.cur[1] * st + rz * ct, d = 2.6 / (2.6 + z2);
+        P2.push([n, hub[0] + rx * R * d, hub[1] + y2 * R * d, d]);
+      }
+      const at = new Map(P2.map((p) => [p[0].id, p]));
+      f.lineWidth = 1;
+      for (const [n, x, y] of P2) for (const id of n.links) { const q = at.get(id); if (!q) continue; f.strokeStyle = `rgba(170,225,255,${(0.14 + Math.max(n.k, q[0].k) * 0.4) * bvis})`; f.beginPath(); f.moveTo(x, y); f.lineTo(q[1], q[2]); f.stroke(); }
+      for (const [n, x, y, d] of P2) {
+        const r = (2.2 + n.k * 3) * d, c = n.col.join(",");
+        const gg = f.createRadialGradient(x, y, 0, x, y, r * 6); gg.addColorStop(0, `rgba(${c},${0.7 * bvis})`); gg.addColorStop(1, `rgba(${c},0)`);
+        f.fillStyle = gg; f.fillRect(x - r * 6, y - r * 6, r * 12, r * 12);
+        f.fillStyle = `rgba(255,255,255,${bvis})`; f.beginPath(); f.arc(x, y, r * 0.7, 0, TAU); f.fill();
+        if (n.k > 0.3) LABELS.push([x, y + r * 2 + 4, n.name, c, n.k * bvis]);
+      }
+    }
+    brainRing(hub, R, (1 - mix) * a);
+    voiceWave(hub, R);
+    drawCaption(now, hub, R);
   }
 
   /* ================= FRAME ================= */
@@ -279,8 +434,7 @@
     const dt = Math.min(now - last, 50) / 1000; last = now;
     if (box.offsetWidth === 0) { if (!reduce) requestAnimationFrame(frame); return; } // tab hidden
     const m = MODES[mode];
-    if (mode === "thinking") holdUntil = now + 5500; else if (mode !== "idle") holdUntil = 0;
-    const want = pinned || explore || mode === "thinking" || now < holdUntil ? 1 : 0;   // the ship is for work; voice gets the face
+    const want = pinned || explore ? 1 : 0;   // the ship opens on request ("Show ship"); the core reacts to voice and work
     form = reduce ? want : form + (want - form) * (want ? 0.024 : 0.016);
     explode += ((explore ? 1.4 : m.e * smooth(form * 1.4 - 0.4)) - explode) * (reduce ? 1 : 0.045);
     zoom += (targetZoom - zoom) * (reduce ? 1 : 0.12);
@@ -423,6 +577,16 @@
       ctx.fillStyle = sg; ctx.fillRect(CX - S * 3, scanY, S * 6, 1);
     }
     ctx.globalCompositeOperation = "source-over";
+    if (LABELS.length) {
+      ctx.font = '500 11px "IBM Plex Mono", monospace'; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (const [x, y, text, c, a] of LABELS) {
+        const w = ctx.measureText(text).width + 16;
+        ctx.fillStyle = `rgba(4,10,16,${0.86 * a})`; ctx.strokeStyle = `rgba(${c},${0.85 * a})`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.roundRect(x - w / 2, y, w, 21, 10); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = `rgba(240,244,246,${a})`; ctx.fillText(text, x, y + 11);
+      }
+      LABELS.length = 0;
+    }
 
     if (now - orientAt > 140) { orientAt = now; api.onOrient?.(((yaw * 180 / Math.PI) % 360 + 360) % 360, pitch * 180 / Math.PI, explode, form); }
     if (!reduce) requestAnimationFrame(frame);
@@ -463,7 +627,8 @@
     setMode(m) { if (MODES[m]) { mode = m; redraw(); } },
     get mode() { return mode; },
     get form() { return form; },
-    pulse(v) { level = Math.max(level, clamp(v)); },   // voice or text activity, 0..1
+    pulse(v) { level = Math.max(level, clamp(v)); },
+    caption(text) { caption(text); },   // voice or text activity, 0..1
     onOrient: null,
   };
   window.Holo = api;

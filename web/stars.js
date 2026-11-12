@@ -16,7 +16,7 @@
   const ease = (x) => (x < 0 ? 0 : x > 1 ? 1 : 1 - Math.pow(1 - x, 3));
 
   let W = 0, H = 0, dpr = 1, bg = null, files = [], byId = new Map(), dust = [];
-  let interactive = false, hover = null, center = null, bounds = null, t = 0, last = performance.now();
+  let interactive = false, hover = null, center = null, bounds = null, showFiles = true, t = 0, last = performance.now();
   const focus = new Map();   // id -> { at, until, slot, pinned }
 
   // a star's home on screen: its place in the sky, mapped into the bounds (whole screen by default)
@@ -119,6 +119,7 @@
       }
       f.k = k; f.x = hxOf(f) + ((fo?.tx ?? hxOf(f)) - hxOf(f)) * k; f.y = hyOf(f) + ((fo?.ty ?? hyOf(f)) - hyOf(f)) * k;
     }
+    if (!showFiles) { if (!reduce) requestAnimationFrame(draw); return; }   // console: the files live in the core's brain
     // constellation lines between linked files
     ctx.globalCompositeOperation = "lighter"; ctx.lineWidth = 1;
     for (const f of files) for (const id of f.links || []) {
@@ -171,6 +172,7 @@
     setInteractive(v) { interactive = !!v; if (reduce) draw(); },
     setCenter(p) { center = p; },
     setBounds(r) { bounds = r; if (reduce) draw(); },
+    setShowFiles(v) { showFiles = !!v; if (reduce) draw(); },
     get files() { return files; },
     colorOf: (folder) => `rgb(${colorOf(folder)})`,
   };

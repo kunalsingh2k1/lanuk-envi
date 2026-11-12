@@ -92,7 +92,7 @@
   $("#memSearch")?.addEventListener("input", renderList);
   document.addEventListener("envi:tab", (e) => {
     const on = e.detail === "memory";
-    window.Sky?.setInteractive(on);
+    window.Sky?.setInteractive(on); window.Sky?.setShowFiles(on);
     if (on) { requestAnimationFrame(fitSpace); load(); }
     else { window.Sky?.setCenter(null); window.Sky?.setBounds(null); if (picked) { window.Sky?.release(); picked = null; } }
   });
@@ -105,5 +105,6 @@
   }
   addEventListener("resize", fitSpace);
 
+  window.Sky?.setShowFiles(!document.getElementById("view-memory")?.hidden);   // the first tab was shown before this script loaded
   load(); setInterval(load, 120_000);
 })();

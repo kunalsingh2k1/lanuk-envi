@@ -35,6 +35,10 @@
 // fast model, T3 is real work on a large model. Envi shows the tier of the model you chose.
   const TIER = { 1: "Instant · no model", 2: "Quick answer", 3: "Real work" };
   const tierOf = (provider, model) => (provider === "local" ? (/(^|[^0-9])(1|2|3|4|7|8)b|4b|mini|small/i.test(model) ? 2 : 3) : /haiku/i.test(model) ? 2 : 3);
+  // Words that fly out of the core: the last few words of what Envi is saying, a chunk at a time.
+  const chunk = (text, n = 7) => text.trim().split(/\s+/).slice(-n).join(" ");
+  let capAt = 0;
+  const showWords = (text, force) => { const now = Date.now(); if (force || now - capAt > 1100) { capAt = now; window.Holo?.caption(chunk(text)); } };
   const setMode = (m) => { window.Holo?.setMode(m); $("#mode").textContent = MODE_LABEL[m]; emit("mode", m); };
 
   /* ---------- panels ---------- */
@@ -251,7 +255,7 @@
     if (v) u.voice = v;
     u.rate = 1.03;
     u.onstart = () => { setMode("speaking"); $("#stopBtn").hidden = false; };
-    u.onboundary = () => emit("pulse", 0.7);   // each spoken word moves the voice line
+    u.onboundary = (e) => { emit("pulse", 0.7); const words = text.slice(0, (e.charIndex || 0) + 1).trim().split(/\s+/), k = Math.floor((words.length - 1) / 6) * 6; window.Holo?.caption(text.split(/\s+/).slice(k, k + 6).join(" ")); };   // spoken words land under the core
     u.onend = u.onerror = () => { if (window.Holo?.mode === "speaking") setMode("idle"); if (!ctl) $("#stopBtn").hidden = true; };
     synth.speak(u);
   }
@@ -355,14 +359,14 @@
           if (!ev || !data) continue;
           const d = JSON.parse(data);
           if (ev === "meta") { conversationId = d.conversationId || conversationId; node.meta.textContent = `T${tierOf(d.provider, d.model)} · ${d.provider}/${d.model} · thinking…`; if (d.sources?.length) emit("sources", d.sources); }
-          else if (ev === "thinking") node.meta.textContent = `${choice.provider}/${choice.model} · reasoning…`;
-          else if (ev === "text") { emit("pulse", Math.min(1, 0.25 + (d.text.length - answer.length) / 60)); answer = d.text; node.txt.textContent = answer; log.scrollTop = log.scrollHeight; }
+          else if (ev === "thinking") node.meta.textContent = `T${tierOf(choice.provider, choice.model)} · ${choice.provider}/${choice.model} · reasoning…`;
+          else if (ev === "text") { showWords(d.text); emit("pulse", Math.min(1, 0.25 + (d.text.length - answer.length) / 60)); answer = d.text; node.txt.textContent = answer; log.scrollTop = log.scrollHeight; }
           else if (ev === "done") got = d;
           else if (ev === "error") throw Object.assign(new Error(d.message), { code: d.code });
         }
       }
       if (!got) throw new Error("The connection closed before the answer finished.");
-      node.txt.textContent = got.text; turns.push({ role: "assistant", content: got.text });
+      node.txt.textContent = got.text; turns.push({ role: "assistant", content: got.text }); showWords(got.text.split(/(?<=[.!?])\s+/).filter(Boolean).pop() || got.text, true);
       finishMeta(node, { ...got, question: text });
       $("#tMs").textContent = `${(got.ms / 1000).toFixed(1)}s`;
       setMode("idle"); say(got.text); loadWall();

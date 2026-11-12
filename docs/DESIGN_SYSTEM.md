@@ -2,6 +2,12 @@
 
 ## Star system · 2026-11-12 (current)
 
+**Update, same day: the core.** At rest the stage centre is the "second brain" (file nodes in
+folder-coloured particle clusters inside a ticked ring, agents on the ring). Listening is an amber
+sphere, thinking violet ribbons, speaking a violet sphere whose words fly out and land below it. A cyan
+voice wave crosses the middle in every state. The ship opens only from "Show ship" or "Explore layers".
+On the console the sky shows no file stars; they are in the brain. The Memory tab keeps them in the sky.
+
 From Kunal's references in `C:\AI OFFICE\Context\` (Jarvis OS slides, a command-centre HUD, an agent
 events wall and a particle "face" video). Builds on Flight Deck v2 below.
 

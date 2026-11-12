@@ -611,3 +611,4 @@ canvas.sky { position: fixed; inset: 0; z-index: -1; width: 100vw; height: 100vh
 }
 @media (max-width: 860px) { .v-console .conversation-title { display: none; } }
 .v-console .quick button { flex: none; }
+.dial .holo-mode { display: none; }   /* the notch shows the state; the core speaks words here instead */
