@@ -207,3 +207,6 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ## 2026-11-12 Codex - Ship reference refinement
 Enlarged rear and middle rings, added hull rails, reduced bloom, adjusted perspective and made ship view the default. Syntax, seven smoke checks and browser orbit/reset passed. Closer reconstruction, not pixel-exact. Remote push initially blocked by automatic approval review; Kunal explicitly approved the push in this chat.
+
+## 2026-11-12 Codex - Ship comparison correction
+Compared live ship against uploaded reference. Corrected camera direction and framing, reduced camera sway, made the nose less pointed and added depth-sorted dark hull under illuminated edges. Preserved interaction and other UI. Seven smoke checks, syntax and orbit/reset passed; no browser errors. Reference-inspired reconstruction, not exact geometry.

@@ -119,7 +119,7 @@
   for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; bar(5, P(3.10, 0.23, a), P(3.10, 0.60, a), tangent(a), 0.025, 0.025, 3, 2); }
 
   // nose: taper, cap, probe and a raked fin
-  shell(7, [...tube(4.60, 5.30, 0.16, 0.13, 6), ...tube(5.30, 5.75, 0.13, 0.05, 4).slice(1)], 14, (j) => (j === 7 ? 1 : 0), (j) => (j > 0 && j < 6 && j % 2 ? 0.4 : 0));
+  shell(7, [...tube(4.60, 5.30, 0.16, 0.13, 6), ...tube(5.30, 5.75, 0.13, 0.085, 4).slice(1)], 14, (j) => (j === 7 ? 1 : 0), (j) => (j > 0 && j < 6 && j % 2 ? 0.4 : 0));
   bar(7, [5.02, -0.15, 0], [5.22, -0.48, 0], [1, 0, 0], 0.07, 0.012, 3, 0);
   line(7, [5.75, 0, 0], [6.05, 0, 0], 2); line(7, [5.75, 0, 0], [5.92, -0.07, 0], 0); line(7, [5.75, 0, 0], [5.92, 0.07, 0], 0);
 
@@ -136,7 +136,7 @@
   const PX = new Float32Array(NQ * 8), FACE = new Float32Array(NQ), LP = new Float32Array(NL * 4);
 
   /* ================= STATE ================= */
-  const YAW0 = -0.80, PITCH0 = -0.22;                 // ship view: wheel near and almost face-on, bow running away to the lower right
+  const YAW0 = 0.72, PITCH0 = 0.20;                 // reference: rear wheel left, long hull descending toward the right
   const YAWC = -Math.PI / 2 + 0.2, PITCHC = -0.08;   // core view: the wheel face-on, hull hidden behind it
   const DIST = 22;             // camera distance: close enough for the wheel to loom over the nose
   let motion = !reduce, explore = false, pinned = true, zoom = 1, targetZoom = 1;
@@ -453,10 +453,10 @@
       flick = Math.random() < 0.01 ? 0.92 + Math.random() * 0.05 : flick + (1 - flick) * 0.2;
     }
     const fe = smooth(form), swing = smooth(form / 0.75), grow = smooth((form - 0.12) / 0.88);
-    yaw = lerp(YAWC, YAW0 + 0.1 * Math.sin(t * 0.21), swing) + uyaw;
+    yaw = lerp(YAWC, YAW0 + 0.025 * Math.sin(t * 0.21), swing) + uyaw;
     pitch = clamp(lerp(PITCHC, PITCH0 + 0.03 * Math.sin(t * 0.16 + 1), swing) + upitch, -1.2, 1.2);
     cyw = Math.cos(yaw); syw = Math.sin(yaw); cpt = Math.cos(pitch); spt = Math.sin(pitch);
-    S = lerp(Math.min(W / 5.4, H / 3.4), Math.min(W / 7.2, H / 3.8), fe) * zoom * (1 - explode * 0.1);
+    S = lerp(Math.min(W / 5.4, H / 3.4), Math.min(W / 7.2, H / 4.7), fe) * zoom * (1 - explode * 0.1);
     CX = W * lerp(0.5, 0.47, fe); CY = H * lerp(0.5, 0.5, fe); pivot = lerp(0, X0, fe); arrK = lerp(0.18, 1, grow);
     const front = lerp(0.5, 6.4, grow), back = lerp(-0.12, -1.8, grow);
     GROUPS.forEach((_, i) => { SC[i][0] = Math.cos(spinAng[i]); SC[i][1] = Math.sin(spinAng[i]); });
@@ -499,6 +499,27 @@
       if (ea > 0.04) EB[kind === 1 && facing > 0 ? 1 : 0][lvl(ea, EL)].push(q);
       if (QW[q] && facing > 0.08 && vis > 0.5 && Math.sin(t * 0.5 + QH[q]) > -0.92) WIN.push(q);
     }
+    // Dark hull panels make the illuminated framework read as a vessel, rather than
+    // an X-ray. Sort panel centres from far to near before drawing the edge overlay.
+    const opaque = [];
+    for (let q = 0; q < NQ; q++) {
+      if (FACE[q] <= 0 || QX[q] > front || QX[q] < back) continue;
+      const group = QG[q], c = SC[group][0], sn = SC[group][1], o = q * 12;
+      let y = 0, z = 0;
+      for (let j = 0; j < 4; j++) { y += QV[o+j*3+1]/4; z += QV[o+j*3+2]/4; }
+      const ry = y*c-z*sn, rz = y*sn+z*c;
+      opaque.push([q, ry*spt + (-(QX[q]-pivot)*syw+rz*cyw)*cpt]);
+    }
+    opaque.sort((a,b)=>b[1]-a[1]);
+    f.globalCompositeOperation = "source-over";
+    for (const [q] of opaque) {
+      const p=q*8, light=Math.round(10+FACE[q]*13);
+      f.fillStyle=`rgba(${light/2},${light+8},${light+16},${shipVis*fade*.94})`;
+      f.beginPath(); f.moveTo(PX[p],PX[p+1]);
+      for(let j=1;j<4;j++) f.lineTo(PX[p+j*2],PX[p+j*2+1]);
+      f.closePath(); f.fill();
+    }
+    f.globalCompositeOperation = "lighter";
     for (let k = 0; k < FB.length; k++) for (let l = 0; l < FL.length; l++) {
       const a = FB[k][l]; if (!a.length) continue;
       f.fillStyle = rgba(FILL[k], FL[l]); f.beginPath();
@@ -571,7 +592,7 @@
     if (hasFilter) g2.filter = "none";
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 0.55; ctx.drawImage(gl, 0, 0, W, H);
-    ctx.globalAlpha = 1; ctx.drawImage(fx, 0, 0, W, H);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; ctx.drawImage(fx, 0, 0, W, H);
     if (scan > 0.02) {
       const sg = ctx.createLinearGradient(CX - S * 3, 0, CX + S * 3, 0);
       sg.addColorStop(0, "rgba(150,222,255,0)"); sg.addColorStop(0.5, `rgba(150,222,255,${(0.14 + explode * 0.2) * scan})`); sg.addColorStop(1, "rgba(150,222,255,0)");
