@@ -5,6 +5,20 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Google connected; real reads verified
+
+- **Done by Kunal (guided step by step):** Google Cloud project "Envi"; Gmail, Calendar, Drive, Sheets APIs
+  on; consent screen External/Testing with his address as test user; Web OAuth client with redirect
+  `http://127.0.0.1:4777/oauth/google/callback`; ID and secret pasted into `.env` by him; Connect approved.
+  (The built-in browser's tools were refused on console.cloud.google.com, so the setup was manual.)
+- **Changed:** `providers/ollama.js`: if a thinking model returns nothing after a tool result, ask once
+  more with `think: false`.
+- **Verified with real data:** `/api/apps` connected. Bridge: Gmail 10 threads, Drive 5 files. Claude
+  Haiku read Calendar through Envi (0 events in 7 days). Local qwen3.5:4b searched Gmail and answered
+  from it after the fix. Server stayed up after each.
+- **Not verified:** Codex with apps (ChatGPT usage limit; the page now shows that message clearly);
+  Sheets read; drafts and new Docs (not exercised, to avoid creating anything); 7-day re-sign-in.
+
 ## 2026-11-12 · Claude · One app hub for every model, with Envi's own Google sign-in
 
 - **Decided by Kunal:** all providers (local, Claude, Codex) use the connectors; Envi signs in to Google itself.
