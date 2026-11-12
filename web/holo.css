@@ -624,3 +624,6 @@ canvas.sky { position: fixed; inset: 0; z-index: -1; width: 100vw; height: 100vh
 @media (max-width: 860px) { .apps-btn span { display: none; } .apps-btn { padding: 0 8px; } }
 .v-console .conversation-title { white-space: nowrap; } .v-console .quick { min-width: 0; }
 @media (min-width: 861px) { .v-console .console { grid-template-columns: auto minmax(0, 1fr); } .v-console .quick { justify-self: end; max-width: 100%; } }
+.sys dd .on { color: var(--ok); } .sys dd .off { color: var(--hot); }
+.sys-link { margin-left: 8px; padding: 1px 8px; border: 1px solid var(--edge-hi); border-radius: 999px; background: none; color: var(--holo); font: 500 10px var(--mono); cursor: pointer; }
+.sys-link:hover { background: var(--holo-soft); }

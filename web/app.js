@@ -29,10 +29,12 @@
   };
 
   let state = null, providers = [], choice = store.get("envi.model", { provider: "claude", model: "sonnet" });
-  let appsOn = store.get("envi.apps", false);   // Apps switch: Claude may read Kunal's apps and make drafts
+  let appsOn = store.get("envi.apps", false);   // Apps switch: any model may read Kunal's Google apps and make drafts
+  let google = { configured: false, connected: false };
   document.getElementById("appsBtn")?.addEventListener("click", () => {
     appsOn = !appsOn; store.set("envi.apps", appsOn); paintChoice();
-    emit("event", { kind: "app", text: appsOn ? "Apps on: Claude can read Gmail, Calendar, Drive, Docs, Sheets and make drafts" : "Apps off: Envi only talks" });
+    emit("event", { kind: "app", text: appsOn ? "Apps on: Envi can read Gmail, Calendar, Drive, Sheets and make drafts" : "Apps off: Envi only talks" });
+    if (appsOn && !google.connected) addMsg("j", google.configured ? "Apps are on, but Google isn't connected yet. Click Connect next to Google in the System panel (or in the Agents tab on a small screen)." : "Apps are on, but Envi has no Google sign-in set up yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to envi/.env (steps in docs/SECURITY.md), restart Envi, then click Connect.", "apps · setup");
   });
   let turns = [], conversationId = null, ctl = null, voiceOut = store.get("envi.voice", false);
   const MODE_LABEL = { idle: "Standby", listening: "Listening", thinking: "Thinking", speaking: "Speaking" };
@@ -208,10 +210,10 @@
       button.setAttribute("aria-pressed", String(button.dataset.provider === p.id));
       button.disabled = !providers.find((item) => item.id === button.dataset.provider)?.models.length;
     });
-    const withApps = appsOn && p.id === "claude", tr = withApps ? 3 : tierOf(p.id, m.id);
+    const withApps = appsOn, tr = withApps ? Math.max(3, tierOf(p.id, m.id)) : tierOf(p.id, m.id);
     const route = `Tier ${tr} · ${TIER[tr]} · ${p.label} ${m.label}${withApps ? " · Apps: read + drafts" : ""}`;
     const ab = $("#appsBtn");
-    if (ab) { ab.disabled = p.id !== "claude"; ab.setAttribute("aria-pressed", String(withApps)); ab.title = p.id === "claude" ? "Let Claude read your Gmail, Calendar, Drive, Docs and Sheets and make drafts. It cannot send, change or delete anything." : "Apps work with Claude only. Choose Claude to use them."; }
+    if (ab) { ab.setAttribute("aria-pressed", String(withApps)); ab.title = "Let the chosen model read your Gmail, Calendar, Drive and Sheets and make drafts (Gmail drafts, new Docs). It cannot send, change, share or delete anything."; }
     $("#routeChip").textContent = route; $("#sysTier").textContent = `T${tr} · ${p.label} ${m.label}`;
     document.querySelectorAll(".quick .tier.tm").forEach((x) => { x.textContent = `T${tr}`; x.className = `tier tm t${tr}`; });
     store.set("envi.model", choice); emit("model");
@@ -353,7 +355,7 @@
       const r = await fetch("/api/chat", {
         method: "POST", signal: mine.signal,
         headers: { "content-type": "application/json", "x-envi": "1" },
-        body: JSON.stringify({ ...choice, conversationId, messages: turns.slice(-16), apps: appsOn && choice.provider === "claude" }),
+        body: JSON.stringify({ ...choice, conversationId, messages: turns.slice(-16), apps: appsOn }),
       });
       if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error?.message || `The server answered ${r.status}.`); }
       const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
@@ -413,6 +415,28 @@
     emit("event", { kind: "skill", text: `${k.label} (T${tierOf(choice.provider, choice.model)}, ${choice.provider}/${choice.model})` });
     send(k.prompt);
   }));
+
+  /* ---------- Google connection (Envi's own sign-in) ---------- */
+  async function loadGoogle() {
+    try { google = (await api("/api/apps")).google; } catch { return; }
+    const dd = $("#sysGoogle"); if (!dd) return;
+    dd.replaceChildren();
+    const btn = el("button", "sys-link"); btn.type = "button";
+    if (google.connected) {
+      dd.append(el("span", "on", "Connected"));
+      btn.textContent = "Disconnect"; btn.title = `Signed in${google.account ? " as " + google.account : ""}. Disconnect removes Envi's Google access from this PC.`;
+      btn.addEventListener("click", async () => { if (!confirm("Disconnect Google from Envi? Envi will no longer read your mail, calendar or files.")) return; await api("/api/google/disconnect", { method: "POST" }); loadGoogle(); });
+    } else if (google.configured) {
+      btn.textContent = "Connect"; btn.title = "Sign in to Google so Envi can read Gmail, Calendar, Drive and Sheets and make drafts.";
+      btn.addEventListener("click", () => { location.href = "/api/google/connect"; });
+    } else {
+      dd.append(el("span", "off", "Not set up")); btn.textContent = "How"; btn.title = "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to envi/.env, then restart Envi. Steps: docs/SECURITY.md.";
+      btn.addEventListener("click", () => addMsg("j", "To connect Google: create an OAuth client in Google Cloud (type Web application, redirect " + google.redirect + "), put GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in envi/.env, restart Envi, then click Connect here. Full steps are in docs/SECURITY.md.", "apps · setup"));
+    }
+    dd.append(btn);
+  }
+  loadGoogle();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) loadGoogle(); });
 
   /* ---------- tabs ---------- */
   const tabs = [...document.querySelectorAll(".tabs [role=tab]")];

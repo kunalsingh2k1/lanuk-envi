@@ -1,10 +1,15 @@
 // Claude through the Claude Code CLI, on Kunal's claude.ai subscription. Chat only by default.
-// With apps on, it may use exactly the connector tools in server/connectors.js (read + drafts), nothing else.
+// With apps on, it loads only Envi's MCP bridge (server/mcp-bridge.js) and may call only Envi's app
+// tools (read + drafts, server/connectors.js). Its own built-in tools and other MCP servers stay off.
 import { writeFileSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { runLines, transcript, SANDBOX_DIR } from "./util.js";
-import { allowedTools, BLOCKED_BUILTINS } from "../connectors.js";
+import { TOOLS } from "../connectors.js";
+
+const BRIDGE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "mcp-bridge.js");
+const BLOCKED_BUILTINS = "Bash,Edit,Write,Read,Glob,Grep,WebFetch,WebSearch,NotebookEdit,Task,Agent,TodoWrite,Skill,KillShell,BashOutput";
 
 export const id = "claude";
 export const label = "Claude";
@@ -25,10 +30,18 @@ export async function stream({ model, system, messages, onText, onTool, apps = f
   const sysFile = path.join(SANDBOX_DIR, `sys-${randomUUID()}.txt`);
   writeFileSync(sysFile, system, "utf8");
   let text = "", meta = {};
+  const cleanup = [];
   try {
+    let mcpFile = null;
+    if (apps) {   // the config holds only a command and a path; the bridge reads its token from envi/.secrets
+      mcpFile = path.join(SANDBOX_DIR, `mcp-${randomUUID()}.json`);
+      writeFileSync(mcpFile, JSON.stringify({ mcpServers: { envi: { command: process.execPath, args: [BRIDGE] } } }), "utf8");
+      cleanup.push(mcpFile);
+    }
     const toolArgs = apps
-      ? ["--disallowedTools", BLOCKED_BUILTINS, "--allowedTools", allowedTools().join(",")]   // only the listed connector tools; anything else is refused
-      : ["--tools", "", "--strict-mcp-config"];                                               // no tools and no MCP servers: Envi only talks
+      ? ["--strict-mcp-config", "--mcp-config", mcpFile, "--disallowedTools", BLOCKED_BUILTINS,
+         "--allowedTools", ["ToolSearch", ...TOOLS.map((t) => `mcp__envi__${t.name}`)].join(",")]   // only Envi's tools; anything else is refused
+      : ["--tools", "", "--strict-mcp-config"];                                                    // no tools and no MCP servers: Envi only talks
     await runLines("claude", [
       "-p",
       "--output-format", "stream-json", "--verbose", "--include-partial-messages",
@@ -61,7 +74,7 @@ export async function stream({ model, system, messages, onText, onTool, apps = f
       },
     });
   } finally {
-    try { unlinkSync(sysFile); } catch {}
+    for (const f of [sysFile, ...cleanup]) { try { unlinkSync(f); } catch {} }
   }
   if (!text) throw Object.assign(new Error(meta.rateLimit ? "Your Claude usage limit is reached for now." : "Claude sent back an empty answer."), { code: meta.rateLimit ? "rate_limited" : "empty" });
   return { text, model: meta.model || model };

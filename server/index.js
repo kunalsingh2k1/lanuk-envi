@@ -12,7 +12,10 @@ import { buildSystem } from "./persona.js";
 import * as store from "./db.js";
 import { logExchange, saveNote } from "./vault.js";
 import { listMemory, readMemoryFile, contextSources } from "./memory.js";
-import { APPS, APPS_RULES, describeTool } from "./connectors.js";
+import { APPS_RULES, appsStatus, runTool, onToolUse, mcpTools } from "./connectors.js";
+import * as google from "./google.js";
+import { randomBytes } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(here, "..", ".env"), quiet: true });
@@ -21,6 +24,12 @@ const PORT = Number(process.env.PORT || 4777);
 const HOST = "127.0.0.1"; // never exposed directly; the Cloudflare tunnel connects here
 
 const app = new Hono();
+
+// A fresh one-time token each start, for the MCP bridge that the Claude and Codex CLIs launch.
+// It lives in envi/.secrets/bridge.json (git-ignored), never in a command line or a prompt.
+const TOOL_TOKEN = randomBytes(24).toString("hex");
+mkdirSync(path.resolve(here, "..", ".secrets"), { recursive: true });
+writeFileSync(path.resolve(here, "..", ".secrets", "bridge.json"), JSON.stringify({ url: `http://127.0.0.1:${PORT}`, token: TOOL_TOKEN }), { encoding: "utf8", mode: 0o600 });
 
 // Writes must carry a custom header. Browsers can't add one cross-site without a CORS
 // preflight, which this server never answers, so other websites can't post to Envi.
@@ -57,7 +66,25 @@ app.patch("/api/missions/:id", async (c) => {
 
 app.get("/api/stats", async (c) => c.json({ replies: await store.recentReplies() }));
 
-app.get("/api/apps", (c) => c.json({ apps: APPS.map((a) => ({ id: a.id, label: a.label, read: a.read.length, draft: a.draft })), access: "read + drafts", provider: "claude" }));
+// ---- apps: Envi's own Google sign-in and the connector hub (read + drafts) ----
+app.get("/api/apps", (c) => c.json(appsStatus()));
+app.get("/api/google/connect", (c) => c.redirect(google.authUrl()));
+app.post("/api/google/disconnect", (c) => { google.disconnect(); return c.json(appsStatus()); });
+app.get("/oauth/google/callback", async (c) => {
+  const page = (title, text) => c.html(`<!doctype html><meta charset="utf-8"><title>${title}</title><body style="background:#04070c;color:#eef1f2;font:15px system-ui;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><h2 style="color:#ffbc38">${title}</h2><p>${text}</p><p><a href="/#console" style="color:#8fe6ff">Back to Envi</a></p></div>`);
+  if (c.req.query("error")) return page("Google not connected", "You cancelled, or Google refused. Nothing was saved.");
+  try { await google.finishAuth(c.req.query("code"), c.req.query("state")); return page("Google connected", "Envi can now read your Gmail, Calendar, Drive and Sheets and make drafts. It cannot send, change or delete."); }
+  catch (e) { return page("Google not connected", String(e.message).replace(/[<>&]/g, "")); }
+});
+// The MCP bridge lists and calls tools here. Only the bridge knows the token.
+const bridgeOnly = (c) => c.req.header("x-envi-tool-token") === TOOL_TOKEN;
+app.get("/api/tools", (c) => (bridgeOnly(c) ? c.json({ mcp: mcpTools() }) : c.json({ error: { code: "forbidden", message: "Bridge only." } }, 403)));
+app.post("/api/tools/call", async (c) => {
+  if (!bridgeOnly(c)) return c.json({ error: { code: "forbidden", message: "Bridge only." } }, 403);
+  const { name, args } = await c.req.json().catch(() => ({}));
+  try { return c.json({ result: await runTool(name, args) }); }
+  catch (e) { return c.json({ error: { code: e.code || "tool_error", message: e.message } }, 400); }
+});
 app.get("/api/memory", async (c) => c.json({ files: await listMemory() }));
 app.get("/api/memory/file", async (c) => c.json(await readMemoryFile(c.req.query("id"))));
 
@@ -88,7 +115,7 @@ app.post("/api/chat", async (c) => {
   }
 
   const state = await fullState();
-  const apps = body.apps === true && provider === "claude";   // only Claude gets the connectors
+  const apps = body.apps === true;   // every provider can use the app tools (read + drafts)
   const system = buildSystem({ context: state.context, missions: state.missions.rows, money: state.money }) + (apps ? APPS_RULES : "");
   const question = messages.at(-1).content;
   const signal = c.req.raw.signal;
@@ -110,8 +137,10 @@ app.post("/api/chat", async (c) => {
     const onThinking = () => { if (!thinkingSent) { thinkingSent = true; sse.writeSSE({ event: "thinking", data: "{}" }); } };
 
     try {
-      const onTool = (name, error) => sse.writeSSE({ event: "tool", data: JSON.stringify(name ? { name, label: describeTool(name) } : { error }) });
-      const result = await streamChat({ provider, model, system, messages, onText, onThinking, onTool, apps, signal });
+      const stopTools = apps ? onToolUse((name, label) => sse.writeSSE({ event: "tool", data: JSON.stringify({ name, label }) })) : () => {};
+      let result;
+      try { result = await streamChat({ provider, model, system, messages, onText, onThinking, apps, signal }); }
+      finally { stopTools(); }
       if (pending) await sse.writeSSE({ event: "text", data: JSON.stringify({ text: pending }) });
       const ms = Date.now() - started;
       await sse.writeSSE({ event: "done", data: JSON.stringify({ text: result.text, ms, provider, model: result.model || model, conversationId }) });

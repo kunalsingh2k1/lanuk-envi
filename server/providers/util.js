@@ -22,8 +22,10 @@ export function killTree(child) {
 // Run a CLI, write `input` to its stdin, and call onLine for each stdout line.
 export function runLines(cmd, args, { input, onLine, signal, shell = false, timeoutMs = 300_000 }) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd: SANDBOX_DIR, shell, windowsHide: true, env: process.env });
-    let buf = "", errBuf = "", done = false;
+    // detached: each CLI gets its own (hidden) console. Claude sends Ctrl+C to its console group when it
+    // closes MCP servers; sharing the scheduled task's console, that Ctrl+C also stopped Envi (exit 0xC000013A).
+    const child = spawn(cmd, args, { cwd: SANDBOX_DIR, shell, windowsHide: true, detached: process.platform === "win32", env: process.env });
+    let buf = "", errBuf = "", done = false, lineErr = null;   // lineErr: a deliberate error a provider raised from a line (e.g. "usage limit")
     const finish = (fn, val) => { if (done) return; done = true; clearTimeout(timer); signal?.removeEventListener("abort", onAbort); fn(val); };
     const onAbort = () => { killTree(child); finish(reject, Object.assign(new Error("cancelled"), { code: "cancelled" })); };
     const timer = setTimeout(() => { killTree(child); finish(reject, Object.assign(new Error("The model took too long to answer."), { code: "timeout" })); }, timeoutMs);
@@ -35,7 +37,7 @@ export function runLines(cmd, args, { input, onLine, signal, shell = false, time
       let i;
       while ((i = buf.indexOf("\n")) >= 0) {
         const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-        if (line) { try { onLine(line); } catch (e) { console.error("[provider] line handler:", e.message); } }
+        if (line) { try { onLine(line); } catch (e) { if (e.code && !lineErr) lineErr = e; console.error("[provider] line handler:", e.message); } }
       }
     });
     child.stderr.setEncoding("utf8");
@@ -43,7 +45,8 @@ export function runLines(cmd, args, { input, onLine, signal, shell = false, time
     child.on("error", (e) => finish(reject, Object.assign(new Error(`Could not start ${cmd}: ${e.message}`), { code: "not_installed" })));
     child.on("close", (code) => {
       if (buf.trim()) { try { onLine(buf.trim()); } catch {} }
-      if (code === 0) finish(resolve);
+      if (lineErr) finish(reject, lineErr);
+      else if (code === 0) finish(resolve);
       else finish(reject, Object.assign(new Error(errBuf.trim().split("\n").slice(-3).join(" ") || `${cmd} exited with code ${code}`), { code: "cli_error" }));
     });
     child.stdin.on("error", () => {});

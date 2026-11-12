@@ -74,8 +74,10 @@ All routes are under `/api`. Every non-GET request must carry the header `x-envi
 | `GET /api/stats` | Last 30 assistant replies with provider, model and milliseconds |
 | `GET /api/conversations`, `GET /api/conversations/:id` | Saved chats |
 | `POST /api/obsidian/save` | Body `{title, content, provider, model}`. Writes a note. |
-| `POST /api/chat` | Body `{provider, model, conversationId, messages, apps}`. Streams Server-Sent Events: `meta` (with `sources`), `thinking`, `text`, `tool` (an app step, with a plain label), `done`, `error`. `apps` works only for Claude. |
-| `GET /api/apps` | The apps Envi's Claude may use and the access level (read + drafts). |
+| `POST /api/chat` | Body `{provider, model, conversationId, messages, apps}`. Streams Server-Sent Events: `meta` (with `sources`), `thinking`, `text`, `tool` (an app step, with a plain label), `done`, `error`. `apps` works for every provider. |
+| `GET /api/apps` | Access level (read + drafts), Google connection status and the hub's tools. |
+| `GET /api/google/connect`, `GET /oauth/google/callback`, `POST /api/google/disconnect` | Envi's own Google sign-in. |
+| `GET /api/tools`, `POST /api/tools/call` | For `server/mcp-bridge.js` only (one-time token). The bridge is how Claude and Codex use the hub. |
 | `GET /api/memory`, `GET /api/memory/file?id=` | Every vault, agent and brain file (the stars) and a read-only preview. |
 
 Chat events: `meta` (provider, model, conversation id), `thinking`, `text` (the whole answer so far,

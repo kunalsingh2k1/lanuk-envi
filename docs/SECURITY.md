@@ -18,7 +18,8 @@ This is the state on 2026-11-12, not an aspiration.
 | Server listens on `127.0.0.1` only | `HOST` in `server/index.js` |
 | Writes need the header `x-envi: 1`; the server answers no CORS preflight, so other websites cannot post | `/api/*` middleware |
 | Claude runs with `--tools ""`, no MCP servers, no session saved, user settings skipped | `providers/claude.js` |
-| Apps switch on: Claude gets only the read + draft connector tools named in `server/connectors.js` (Gmail, Calendar, Drive, Docs, Sheets) plus ToolSearch; built-in tools stay blocked. Any other tool is refused by Claude Code (tested 2026-11-12: `create_event` was refused) | `connectors.js`, `providers/claude.js` |
+| Apps switch on (any model): only the eight tools in Envi's hub, `server/connectors.js` (read Gmail, Calendar, Drive, Sheets; save Gmail drafts; create new Docs). Claude and Codex reach them only through `server/mcp-bridge.js` with their other tools and MCP servers off; local models through Envi's own tool loop. Unknown tool names are refused by the hub (tested: `gmail_send`) | `connectors.js`, `mcp-bridge.js`, `providers/*.js` |
+| Google access is Envi's own sign-in. The refresh token is in `envi/.secrets/google.json` (git-ignored); the bridge's one-time token in `envi/.secrets/bridge.json`, new on every start. `/api/tools/*` answers only that token (403 otherwise) | `google.js`, `index.js` |
 | Codex runs with `--sandbox read-only --ephemeral` | `providers/codex.js` |
 | Both CLIs run in an empty `.sandbox/` folder, so they pick up no project instructions | `providers/util.js` |
 | Chat input is capped: 16 turns, 8,000 characters each | `/api/chat` |
@@ -36,7 +37,7 @@ This is the state on 2026-11-12, not an aspiration.
 | The service role key is far broader than Envi needs. | Open. A dedicated database role limited to `envi_*` would be safer. |
 | Raw chat exports in `C:\AI OFFICE\MEMORY\transcripts\...\raw\` contain a Supabase key. Kunal chose to leave them. | Open. Never share, upload or read that folder. |
 | An owner access token was pasted into a chat on 5 Nov (noted in a Singha Tax handover file). | Open mission `m03`: revoke it in the provider's dashboard. |
-| Prompt injection: text in a vault note, brief, email or Drive file reaches the model. | With Apps off, the worst case is a wrong answer. With Apps on, the worst case is a wrong draft or an unwanted Drive file: nothing can be sent, shared or deleted. The prompt tells Claude to treat app content as information. |
+| Prompt injection: text in a vault note, brief, email or Drive file reaches the model. | With Apps off, the worst case is a wrong answer. With Apps on, the worst case is a wrong draft or an unwanted new Doc: nothing can be sent, shared or deleted. The prompt tells every model to treat app content as information. |
 | `innerHTML` is used in `web/chrome.js`. | Only with constant strings (icons, fixed markup). Keep it that way. |
 | The "Hi Envi" wake phrase sends microphone audio to the browser vendor's speech service while on. | By design; it is off until Kunal switches it on. |
 | The scheduled task runs as Kunal's user with his CLI logins. | By design; the CLIs need his profile. |
@@ -59,6 +60,20 @@ This is the state on 2026-11-12, not an aspiration.
    `envi.lanukx.in` to HTTP `127.0.0.1:4777`.
 3. Test from a phone on mobile data. The Cloudflare login must appear first. If Envi loads without it,
    delete the hostname at once.
+
+## 05b Connect Google (one time, Kunal)
+
+1. console.cloud.google.com → create a project (e.g. "Envi").
+2. APIs & Services → Library → enable **Gmail API, Google Calendar API, Google Drive API, Google Sheets API**.
+3. OAuth consent screen → External → app name "Envi", your email → add yourself under **Test users**.
+4. Credentials → Create credentials → OAuth client ID → type **Web application** → Authorized redirect URI
+   `http://127.0.0.1:4777/oauth/google/callback`.
+5. Paste the client ID and secret into `envi/.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` yourself, restart the task.
+6. In Envi, System panel → Google → **Connect**, approve. Envi asks for: read mail, write drafts, read calendar,
+   read Drive, create its own files, read Sheets. (`gmail.compose` technically allows sending; Envi has no send code.)
+
+While the app stays in Google's "Testing" mode, the sign-in lasts 7 days; Envi then says so and you click Connect again.
+To remove access: Disconnect in Envi, and myaccount.google.com/permissions.
 
 ## 06 If something goes wrong
 

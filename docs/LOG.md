@@ -5,6 +5,26 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · One app hub for every model, with Envi's own Google sign-in
+
+- **Decided by Kunal:** all providers (local, Claude, Codex) use the connectors; Envi signs in to Google itself.
+- **Changed:** `server/google.js` (OAuth with state check, token in `.secrets/google.json`, Gmail/Calendar/
+  Drive/Sheets calls). `server/connectors.js` is now the hub: eight tools (read Gmail, Calendar, Drive,
+  Sheets; Gmail draft; new Doc), `runTool` refuses anything else. `server/mcp-bridge.js`: a small MCP server
+  the Claude and Codex CLIs start; it forwards calls to `/api/tools/call` with a one-time token. Claude
+  loads only that bridge; Codex runs its script directly with Node, the bridge on and node_repl off; Ollama
+  gets the tools as functions and Envi runs up to five rounds. Page: Apps for every model, Google row in
+  the System panel (Connect, Disconnect, How). The claude.ai-connector path from earlier today is replaced.
+- **Fixed:** under the scheduled task, Claude's Ctrl+C when closing MCP servers stopped Envi (exit
+  0xC000013A). CLIs now start in their own console (`detached`). Provider error lines (e.g. "usage
+  limit") now reach the page instead of "exited with code 1".
+- **Verified:** smoke test 7/7. Bridge by hand: 8 tools listed; `calendar_events` reaches Envi;
+  `gmail_send` refused; `/api/tools/call` without token 403. Through `/api/chat` under the task: Claude
+  Haiku called `gmail_search` and `calendar_events`; local qwen3.5:4b called `gmail_search` (10.8 s);
+  each answer said to Connect Google; server stayed up.
+- **Not verified:** any real Google read (no OAuth client yet); Codex end to end (usage limit until
+  11:06); token refresh and the 7-day expiry path.
+
 ## 2026-11-12 · Claude · Apps (Google Workspace) and the organized brain
 
 - **Decided by Kunal:** app access is read + drafts; the brain stays in `MEMORY/brain`.
