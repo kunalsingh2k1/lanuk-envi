@@ -18,11 +18,12 @@ This is the state on 2026-11-12, not an aspiration.
 | Server listens on `127.0.0.1` only | `HOST` in `server/index.js` |
 | Writes need the header `x-envi: 1`; the server answers no CORS preflight, so other websites cannot post | `/api/*` middleware |
 | Claude runs with `--tools ""`, no MCP servers, no session saved, user settings skipped | `providers/claude.js` |
+| Apps switch on: Claude gets only the read + draft connector tools named in `server/connectors.js` (Gmail, Calendar, Drive, Docs, Sheets) plus ToolSearch; built-in tools stay blocked. Any other tool is refused by Claude Code (tested 2026-11-12: `create_event` was refused) | `connectors.js`, `providers/claude.js` |
 | Codex runs with `--sandbox read-only --ephemeral` | `providers/codex.js` |
 | Both CLIs run in an empty `.sandbox/` folder, so they pick up no project instructions | `providers/util.js` |
 | Chat input is capped: 16 turns, 8,000 characters each | `/api/chat` |
 | Provider and model must be on the live list before any work starts | `/api/chat` |
-| Vault reads are limited to `LANUK OFFICE/` and `.claude/agents/`; writes only to `LANUK OFFICE/Envi/` | `context.js`, `vault.js` |
+| Reads are limited to `LANUK OFFICE/`, `.claude/agents/` and `MEMORY/brain/` (never `MEMORY/transcripts/`); paths that resolve outside them return 400; writes only to `LANUK OFFICE/Envi/` | `context.js`, `memory.js`, `vault.js` |
 | Text from files, the database and models is inserted with `textContent` | `web/app.js` |
 | Supabase tables locked to the service role | [DATABASE.md](DATABASE.md) |
 | `.env`, `.sandbox/`, `logs/` and `node_modules/` are git-ignored | `.gitignore` |
@@ -35,7 +36,7 @@ This is the state on 2026-11-12, not an aspiration.
 | The service role key is far broader than Envi needs. | Open. A dedicated database role limited to `envi_*` would be safer. |
 | Raw chat exports in `C:\AI OFFICE\MEMORY\transcripts\...\raw\` contain a Supabase key. Kunal chose to leave them. | Open. Never share, upload or read that folder. |
 | An owner access token was pasted into a chat on 5 Nov (noted in a Singha Tax handover file). | Open mission `m03`: revoke it in the provider's dashboard. |
-| Prompt injection: text in a vault note or brief reaches the model as context. | Limited: the models have no tools, so the worst case is a wrong answer. This changes if tools are ever enabled. |
+| Prompt injection: text in a vault note, brief, email or Drive file reaches the model. | With Apps off, the worst case is a wrong answer. With Apps on, the worst case is a wrong draft or an unwanted Drive file: nothing can be sent, shared or deleted. The prompt tells Claude to treat app content as information. |
 | `innerHTML` is used in `web/chrome.js`. | Only with constant strings (icons, fixed markup). Keep it that way. |
 | The "Hi Envi" wake phrase sends microphone audio to the browser vendor's speech service while on. | By design; it is off until Kunal switches it on. |
 | The scheduled task runs as Kunal's user with his CLI logins. | By design; the CLIs need his profile. |

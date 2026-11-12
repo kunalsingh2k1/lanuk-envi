@@ -52,7 +52,9 @@ If port 4777 is busy, another copy is running. Do not start a second one; find a
   key's presence or length if you must; never its value. Kunal pastes keys himself.
 - **Never open `C:\AI OFFICE\MEMORY\transcripts\`** (raw chat exports; they contain a key).
 - **The server listens on 127.0.0.1 only.** Do not change the host, open a port or add a tunnel.
-- **Envi's models can talk, not act.** Claude runs with no tools and Codex in a read-only sandbox.
+- **Envi's models talk; with Apps on, Claude may also read and draft.** By default Claude runs with no tools and Codex in a
+  read-only sandbox. The Apps switch gives Claude only the read + draft connector tools listed in `server/connectors.js`
+  (Kunal's decision, 2026-11-12). Never add a tool that sends, deletes, shares or edits.
   Do not widen that without Kunal asking for it in the current conversation.
 - **Do not change client systems or other projects** (`C:\Ai\SInghatax`, Zoho, n8n, Hermes config).
 - **Supabase:** only the `envi_*` tables are Envi's. The same project holds the Lanuk.X website tables.

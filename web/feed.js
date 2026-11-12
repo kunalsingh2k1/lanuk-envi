@@ -9,7 +9,7 @@
   const api = async (url) => { const r = await fetch(url, { headers: { "x-envi": "1" } }); if (!r.ok) throw new Error(); return r.json(); };
   const ist = (iso) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
   const day = (iso) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
-  const LABEL = { reply: "Reply", chat: "Chat", mission: "Mission", file: "File", read: "Memory", skill: "Skill", voice: "Voice" };
+  const LABEL = { reply: "Reply", chat: "Chat", mission: "Mission", file: "File", read: "Memory", skill: "Skill", voice: "Voice", app: "App" };
   let stored = [], live = [];
 
   async function refresh() {

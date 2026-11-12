@@ -12,6 +12,7 @@ import { buildSystem } from "./persona.js";
 import * as store from "./db.js";
 import { logExchange, saveNote } from "./vault.js";
 import { listMemory, readMemoryFile, contextSources } from "./memory.js";
+import { APPS, APPS_RULES, describeTool } from "./connectors.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(here, "..", ".env"), quiet: true });
@@ -56,6 +57,7 @@ app.patch("/api/missions/:id", async (c) => {
 
 app.get("/api/stats", async (c) => c.json({ replies: await store.recentReplies() }));
 
+app.get("/api/apps", (c) => c.json({ apps: APPS.map((a) => ({ id: a.id, label: a.label, read: a.read.length, draft: a.draft })), access: "read + drafts", provider: "claude" }));
 app.get("/api/memory", async (c) => c.json({ files: await listMemory() }));
 app.get("/api/memory/file", async (c) => c.json(await readMemoryFile(c.req.query("id"))));
 
@@ -86,7 +88,8 @@ app.post("/api/chat", async (c) => {
   }
 
   const state = await fullState();
-  const system = buildSystem({ context: state.context, missions: state.missions.rows, money: state.money });
+  const apps = body.apps === true && provider === "claude";   // only Claude gets the connectors
+  const system = buildSystem({ context: state.context, missions: state.missions.rows, money: state.money }) + (apps ? APPS_RULES : "");
   const question = messages.at(-1).content;
   const signal = c.req.raw.signal;
 
@@ -95,7 +98,7 @@ app.post("/api/chat", async (c) => {
     let conversationId = body.conversationId || null;
     try { conversationId = await store.ensureConversation(conversationId, question); } catch (e) { console.error("[envi] conversation:", e.message); }
     const sources = await contextSources().catch(() => []);
-    await sse.writeSSE({ event: "meta", data: JSON.stringify({ provider, model, conversationId, sources }) });
+    await sse.writeSSE({ event: "meta", data: JSON.stringify({ provider, model, conversationId, sources, apps }) });
 
     let last = 0, pending = null;
     const onText = (text) => {
@@ -107,7 +110,8 @@ app.post("/api/chat", async (c) => {
     const onThinking = () => { if (!thinkingSent) { thinkingSent = true; sse.writeSSE({ event: "thinking", data: "{}" }); } };
 
     try {
-      const result = await streamChat({ provider, model, system, messages, onText, onThinking, signal });
+      const onTool = (name, error) => sse.writeSSE({ event: "tool", data: JSON.stringify(name ? { name, label: describeTool(name) } : { error }) });
+      const result = await streamChat({ provider, model, system, messages, onText, onThinking, onTool, apps, signal });
       if (pending) await sse.writeSSE({ event: "text", data: JSON.stringify({ text: pending }) });
       const ms = Date.now() - started;
       await sse.writeSSE({ event: "done", data: JSON.stringify({ text: result.text, ms, provider, model: result.model || model, conversationId }) });

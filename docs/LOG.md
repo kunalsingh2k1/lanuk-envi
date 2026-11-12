@@ -5,6 +5,22 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Apps (Google Workspace) and the organized brain
+
+- **Decided by Kunal:** app access is read + drafts; the brain stays in `MEMORY/brain`.
+- **Changed:** new `server/connectors.js` (allow-list: Gmail, Calendar, Drive, Docs, Sheets read tools,
+  plus Gmail drafts and new Drive files; ToolSearch). `providers/claude.js` uses it only when `apps` is on,
+  keeps built-in tools blocked, and reports each tool call. `/api/chat` streams `tool` events; new
+  `GET /api/apps`. Page: Apps switch in the composer (Claude only), live "Gmail: search threads..."
+  status, App rows in the events feed, Tier 3 route. Memory now includes `MEMORY/brain` as a green cluster.
+- **Brain (outside this repo):** `MEMORY/brain/topics/` (with template and three topics), `inbox/`,
+  generated `INDEX.md` via `_tools/brain-index.mjs`, root `MAP.md`, decisions D06 and D07.
+- **Verified:** smoke test 7/7. Through `/api/chat` with Haiku: Claude loaded and called
+  `Calendar: list calendars` and the page got each step; the connector asked to sign in again.
+  Asked to create an event, `create_event` was refused and nothing was created. Page at 916 and 1440 wide.
+- **Not verified:** any real read of mail, calendar or files (all Google connectors need Kunal to sign
+  in again from `claude` → `/mcp`); Codex and local models do not get apps.
+
 ## 2026-11-12 · Claude · Second-brain core, reactions, flying words, voice wave
 
 - **From:** Kunal's two reference videos in `C:\AI OFFICE\Context\` and a cyan voice-wave image.

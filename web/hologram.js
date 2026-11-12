@@ -223,7 +223,7 @@
   const NP = 3600, PP = new Float32Array(NP * 3), BR = new Float32Array(NP * 3), SPH = new Float32Array(NP * 3);
   const PK = new Float32Array(NP), PU = new Float32Array(NP), PC = new Uint8Array(NP);
   const PAL = [[150, 255, 170], [255, 226, 120], [143, 230, 255], [255, 150, 210], [236, 242, 255], [198, 166, 255]];
-  const FOLDER = { Root: [255, 233, 196], Clients: [255, 188, 56], Envi: [143, 230, 255], Agents: [198, 166, 255] };
+  const FOLDER = { Root: [255, 233, 196], Clients: [255, 188, 56], Envi: [143, 230, 255], Agents: [198, 166, 255], Brain: [150, 255, 170] };
   const ball = (r) => { let x, y, z; do { x = rnd() * 2 - 1; y = rnd() * 2 - 1; z = rnd() * 2 - 1; } while (x * x + y * y + z * z > 1); return [x * r, y * r, z * r]; };
   for (let i = 0; i < NP; i++) {
     const yy = 1 - (2 * (i + 0.5)) / NP, rr = Math.sqrt(1 - yy * yy), th = i * 2.39996323;   // even points on a sphere
@@ -247,7 +247,7 @@
       if (i % 20 < 11 && folders.length) {
         const fo = folders[i % folders.length], c = centre[fo], o = ball(0.27 * Math.pow(rnd(), 0.8));
         BR.set([c[0] + o[0], c[1] + o[1], c[2] + o[2]], i * 3);
-        const fc = FOLDER[fo]; PC[i] = fc ? [Object.keys(FOLDER).indexOf(fo)].map((k) => [4, 1, 2, 5][k] ?? 0)[0] : (i % PAL.length);
+        const fc = FOLDER[fo]; PC[i] = fc ? [Object.keys(FOLDER).indexOf(fo)].map((k) => [4, 1, 2, 5, 0][k] ?? 0)[0] : (i % PAL.length);
       }
     }
   }

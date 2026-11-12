@@ -1,18 +1,19 @@
 // Envi's memory map: every file in the vault (and every agent definition) is a star.
-// Read-only. Reads only inside the vault folder and .claude/agents, never anywhere else,
+// Read-only. Reads only inside the vault folder, .claude/agents and the shared brain (MEMORY/brain),
 // and never follows a path that resolves outside those two roots.
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const VAULT = () => path.resolve(process.env.VAULT_PATH || "C:\\AI OFFICE\\LANUK OFFICE");
 const AGENTS = () => path.resolve(VAULT(), "..", ".claude", "agents");
+const BRAIN = () => path.resolve(VAULT(), "..", "MEMORY", "brain");   // curated, no secrets by its own rules; never MEMORY/transcripts
 const TEXT = new Set([".md", ".txt", ".csv", ".json", ".yml", ".yaml", ".canvas", ".base"]);
 const MAX_FILES = 600, MAX_DEPTH = 6, PREVIEW = 6000;
 
-// Ids look like "vault/Clients/Singha Tax/brief.md" or "agents/lanuk-content-planner.md".
-const ROOTS = () => ({ vault: VAULT(), agents: AGENTS() });
+// Ids look like "vault/Clients/Singha Tax/brief.md", "agents/lanuk-content-planner.md" or "brain/topics/x.md".
+const ROOTS = () => ({ vault: VAULT(), agents: AGENTS(), brain: BRAIN() });
 function resolveId(id) {
-  const m = /^(vault|agents)\/(.+)$/.exec(String(id || ""));
+  const m = /^(vault|agents|brain)\/(.+)$/.exec(String(id || ""));
   if (!m) return null;
   const root = ROOTS()[m[1]], full = path.resolve(root, m[2]);
   return full.startsWith(root + path.sep) ? full : null;   // blocks "../" escapes
@@ -40,7 +41,7 @@ function linksIn(text) {
 }
 
 export async function listMemory() {
-  const found = [...await walk(VAULT(), "vault"), ...await walk(AGENTS(), "agents")];
+  const found = [...await walk(VAULT(), "vault"), ...await walk(AGENTS(), "agents"), ...await walk(BRAIN(), "brain")];
   const files = [], linkSets = [];
   for (const f of found) {
     const full = path.join(f.root, f.rel), ext = path.extname(f.rel).toLowerCase();
@@ -51,7 +52,7 @@ export async function listMemory() {
     files.push({
       id: `${f.prefix}/${f.rel}`,
       name: path.basename(f.rel),
-      folder: f.prefix === "agents" ? "Agents" : parts.length > 1 ? parts[0] : "Root",
+      folder: f.prefix === "agents" ? "Agents" : f.prefix === "brain" ? "Brain" : parts.length > 1 ? parts[0] : "Root",
       ext, size: st.size, mtime: st.mtime.toISOString(),
     });
     linkSets.push(links);

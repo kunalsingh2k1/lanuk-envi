@@ -10,7 +10,7 @@
   const ctx = cv.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const TAU = Math.PI * 2;
-  const COLORS = { Root: [255, 233, 196], Clients: [255, 188, 56], Envi: [143, 230, 255], Agents: [198, 166, 255] };
+  const COLORS = { Root: [255, 233, 196], Clients: [255, 188, 56], Envi: [143, 230, 255], Agents: [198, 166, 255], Brain: [150, 255, 170] };
   const hash = (s) => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
   const colorOf = (folder) => COLORS[folder] || (() => { const h = hash(folder); return [150 + h * 100 | 0, 200 - h * 60 | 0, 255]; })();
   const ease = (x) => (x < 0 ? 0 : x > 1 ? 1 : 1 - Math.pow(1 - x, 3));

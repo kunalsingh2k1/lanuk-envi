@@ -19,7 +19,8 @@ How code is written in this project. Match what is there before adding something
 - Read environment variables inside functions, not at import time, so `.env` loading order never matters.
 - Windows matters: spawn `.cmd` shims with `shell: true` and only constant arguments; pass long text
   through stdin or a temp file, because command lines cap near 32k characters; kill process trees with `taskkill`.
-- Nothing reads outside the vault and `.claude/agents/`. Nothing writes outside `<vault>/Envi/`.
+- Nothing reads outside the vault, `.claude/agents/` and `MEMORY/brain/`. Nothing writes outside `<vault>/Envi/`.
+- App access is one allow-list in `server/connectors.js`. Change it only when Kunal asks, and never add send, delete, share or edit tools.
 
 ## Page
 

@@ -30,7 +30,7 @@
       head.append(dot, el("span", null, fo), el("small", null, String(items.length))); ul.append(head);
       for (const f of items) {
         const li = el("li"), b = el("button", "mem-file"); b.type = "button";
-        b.append(el("span", null, short(f)), el("small", null, f.id.replace(/^(vault|agents)\//, "").replace(/\/?[^/]+$/, "") || (f.folder === "Agents" ? ".claude/agents" : "vault")));
+        b.append(el("span", null, short(f)), el("small", null, f.id.replace(/^(vault|agents|brain)\//, "").replace(/\/?[^/]+$/, "") || ({ Agents: ".claude/agents", Brain: "MEMORY/brain" }[f.folder] || "vault")));
         b.setAttribute("aria-pressed", String(picked === f.id));
         b.addEventListener("click", () => pick(f.id));
         li.append(b); ul.append(li);

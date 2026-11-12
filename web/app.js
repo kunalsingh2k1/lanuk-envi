@@ -29,6 +29,11 @@
   };
 
   let state = null, providers = [], choice = store.get("envi.model", { provider: "claude", model: "sonnet" });
+  let appsOn = store.get("envi.apps", false);   // Apps switch: Claude may read Kunal's apps and make drafts
+  document.getElementById("appsBtn")?.addEventListener("click", () => {
+    appsOn = !appsOn; store.set("envi.apps", appsOn); paintChoice();
+    emit("event", { kind: "app", text: appsOn ? "Apps on: Claude can read Gmail, Calendar, Drive, Docs, Sheets and make drafts" : "Apps off: Envi only talks" });
+  });
   let turns = [], conversationId = null, ctl = null, voiceOut = store.get("envi.voice", false);
   const MODE_LABEL = { idle: "Standby", listening: "Listening", thinking: "Thinking", speaking: "Speaking" };
   // The router display, after the "Jev" tiers: T1 answers from files with no model, T2 is a small
@@ -203,7 +208,10 @@
       button.setAttribute("aria-pressed", String(button.dataset.provider === p.id));
       button.disabled = !providers.find((item) => item.id === button.dataset.provider)?.models.length;
     });
-    const tr = tierOf(p.id, m.id), route = `Tier ${tr} · ${TIER[tr]} · ${p.label} ${m.label}`;
+    const withApps = appsOn && p.id === "claude", tr = withApps ? 3 : tierOf(p.id, m.id);
+    const route = `Tier ${tr} · ${TIER[tr]} · ${p.label} ${m.label}${withApps ? " · Apps: read + drafts" : ""}`;
+    const ab = $("#appsBtn");
+    if (ab) { ab.disabled = p.id !== "claude"; ab.setAttribute("aria-pressed", String(withApps)); ab.title = p.id === "claude" ? "Let Claude read your Gmail, Calendar, Drive, Docs and Sheets and make drafts. It cannot send, change or delete anything." : "Apps work with Claude only. Choose Claude to use them."; }
     $("#routeChip").textContent = route; $("#sysTier").textContent = `T${tr} · ${p.label} ${m.label}`;
     document.querySelectorAll(".quick .tier.tm").forEach((x) => { x.textContent = `T${tr}`; x.className = `tier tm t${tr}`; });
     store.set("envi.model", choice); emit("model");
@@ -345,7 +353,7 @@
       const r = await fetch("/api/chat", {
         method: "POST", signal: mine.signal,
         headers: { "content-type": "application/json", "x-envi": "1" },
-        body: JSON.stringify({ ...choice, conversationId, messages: turns.slice(-16) }),
+        body: JSON.stringify({ ...choice, conversationId, messages: turns.slice(-16), apps: appsOn && choice.provider === "claude" }),
       });
       if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error?.message || `The server answered ${r.status}.`); }
       const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
@@ -361,6 +369,10 @@
           if (ev === "meta") { conversationId = d.conversationId || conversationId; node.meta.textContent = `T${tierOf(d.provider, d.model)} · ${d.provider}/${d.model} · thinking…`; if (d.sources?.length) emit("sources", d.sources); }
           else if (ev === "thinking") node.meta.textContent = `T${tierOf(choice.provider, choice.model)} · ${choice.provider}/${choice.model} · reasoning…`;
           else if (ev === "text") { showWords(d.text); emit("pulse", Math.min(1, 0.25 + (d.text.length - answer.length) / 60)); answer = d.text; node.txt.textContent = answer; log.scrollTop = log.scrollHeight; }
+          else if (ev === "tool") {   // Claude used one of Kunal's apps (read + drafts only)
+            if (d.name) { node.meta.textContent = `T3 · ${d.label}…`; emit("event", { kind: "app", text: d.label }); emit("pulse", 0.5); }
+            else if (d.error) emit("event", { kind: "app", text: `App said: ${d.error}` });
+          }
           else if (ev === "done") got = d;
           else if (ev === "error") throw Object.assign(new Error(d.message), { code: d.code });
         }

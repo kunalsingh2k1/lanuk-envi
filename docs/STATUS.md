@@ -21,6 +21,8 @@ and phone layouts verified. Details and limitations: `../design-qa.md` and `LOG.
 | Windows scheduled task "Lanuk Envi" (starts at sign-in, restarts) | Verified running 2026-11-11 | `Get-ScheduledTask` |
 | Private GitHub repo `kunalsingh2k1/lanuk-envi` | Verified 2026-11-12 | `git status` clean against `origin/main` |
 | Interface: 5 tabs on one fixed screen, top notch, radial menu, stats dock | Verified in browser 2026-11-12 | Desktop 1440x900, phone 375x812, scripted events |
+| Apps switch: Claude can read Gmail, Calendar, Drive, Docs, Sheets and make drafts (allow-list in `server/connectors.js`) | Built and wired; verified 2026-11-12 that tool calls stream to the page and that `create_event` is refused | Apps need one sign-in: run `claude`, type `/mcp`, sign in to Gmail, Calendar, Drive, Docs, Sheets (they asked to "sign in again") |
+| Brain files as stars (green "Brain" cluster, 25 files) | Verified 2026-11-12 | Memory tab |
 | Star system: every vault file a star (`/api/memory`), Memory tab with preview, particle face (star, listening and speaking spheres), skills with tiers, events feed, system rail | Verified in browser 2026-11-12 | 1440x900 and 375x812, no page scroll; real local chat flew the 5 files it read into the centre and logged them |
 | Flight Deck v2: lit 3D ship after the reference, circle core that unfolds into the ship, voice line, chat across the bottom | Verified in browser 2026-11-12 | 1440x900 and 375x812, no page scroll; real local-model chat unfolded the ship, moved the voice line, folded back after the reply |
 | "Hi Envi" wake phrase | Built; phrase matching tested on 12 samples | No real microphone test |
