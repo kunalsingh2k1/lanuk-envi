@@ -96,10 +96,10 @@
   line(0, [-1.45, -0.2, 0], [-1.45, 0.2, 0], 0); line(0, [-1.45, 0, -0.2], [-1.45, 0, 0.2], 0); line(0, [-1.45, 0, 0], [-1.7, 0, 0], 2);
 
   // main wheel: thick outer rim, inner ring, six spokes, braces
-  band(1, 0, 0.84, 1.0, 0.1, 84, 0.6);
-  band(1, 0, 0.50, 0.58, 0.05, 64, 0.55);
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU + 0.26; bar(1, P(0, 0.27, a), P(0, 0.86, a), tangent(a), 0.032, 0.028, 6, 2); }
-  for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; line(1, P(0, 0.58, a), P(0, 0.86, a + 0.13), 0); }
+  band(1, 0, 1.18, 1.36, 0.13, 112, 0.6);
+  band(1, 0, 0.72, 0.80, 0.065, 84, 0.55);
+  for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU + 0.26; bar(1, P(0, 0.27, a), P(0, 1.18, a), tangent(a), 0.032, 0.028, 6, 2); }
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; line(1, P(0, 0.80, a), P(0, 1.18, a + 0.13), 0); }
   // four long arrays reaching past the rim (group 8 so they can fold in)
   for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.785; bar(8, P(0, 0.6, a), P(0, 1.62, a), tangent(a), 0.085, 0.03, 16, 0, 0.16); }
 
@@ -115,14 +115,15 @@
   shell(6, tube(4.50, 4.60, 0.20, 0.20, 1), 16, () => 1);
 
   // mid ring
-  band(5, 3.10, 0.43, 0.52, 0.06, 56, 0.5);
-  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; bar(5, P(3.10, 0.23, a), P(3.10, 0.43, a), tangent(a), 0.025, 0.025, 3, 2); }
+  band(5, 3.10, 0.60, 0.69, 0.075, 72, 0.5);
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; bar(5, P(3.10, 0.23, a), P(3.10, 0.60, a), tangent(a), 0.025, 0.025, 3, 2); }
 
   // nose: taper, cap, probe and a raked fin
   shell(7, [...tube(4.60, 5.30, 0.16, 0.13, 6), ...tube(5.30, 5.75, 0.13, 0.05, 4).slice(1)], 14, (j) => (j === 7 ? 1 : 0), (j) => (j > 0 && j < 6 && j % 2 ? 0.4 : 0));
   bar(7, [5.02, -0.15, 0], [5.22, -0.48, 0], [1, 0, 0], 0.07, 0.012, 3, 0);
   line(7, [5.75, 0, 0], [6.05, 0, 0], 2); line(7, [5.75, 0, 0], [5.92, -0.07, 0], 0); line(7, [5.75, 0, 0], [5.92, 0.07, 0], 0);
 
+  for (const [group,start,end,radius] of [[3,.7,1.84,.23],[4,2.02,2.90,.21],[6,3.32,4.46,.19]]) { for(let j=0;j<8;j++) { const a=j*TAU/8; bar(group,P(start,radius,a),P(end,radius,a),tangent(a),.012,.015,12,2,.08); } }
   // flatten into typed arrays for the frame loop
   const NQ = Q.length, NL = L.length;
   const QV = new Float32Array(NQ * 12), QN = new Float32Array(NQ * 3), QX = new Float32Array(NQ);
@@ -135,10 +136,10 @@
   const PX = new Float32Array(NQ * 8), FACE = new Float32Array(NQ), LP = new Float32Array(NL * 4);
 
   /* ================= STATE ================= */
-  const YAW0 = -1.0, PITCH0 = -0.32;                 // ship view: wheel near and almost face-on, bow running away to the lower right
+  const YAW0 = -0.80, PITCH0 = -0.22;                 // ship view: wheel near and almost face-on, bow running away to the lower right
   const YAWC = -Math.PI / 2 + 0.2, PITCHC = -0.08;   // core view: the wheel face-on, hull hidden behind it
-  const DIST = 11;             // camera distance: close enough for the wheel to loom over the nose
-  let motion = !reduce, explore = false, pinned = false, zoom = 1, targetZoom = 1;
+  const DIST = 22;             // camera distance: close enough for the wheel to loom over the nose
+  let motion = !reduce, explore = false, pinned = true, zoom = 1, targetZoom = 1;
   let W = 800, H = 600, dpr = 1, bg = null, mode = "idle", last = performance.now(), born = last, t = 0;
   let uyaw = 0, upitch = 0, vyaw = 0, vpitch = 0, dragging = false, px = 0, py = 0, idleSince = 0;
   let explode = 0, energy = 0.3, spinRate = 1, flick = 1, scan = 0, orientAt = 0, form = 0, holdUntil = 0, level = 0;
@@ -455,7 +456,7 @@
     yaw = lerp(YAWC, YAW0 + 0.1 * Math.sin(t * 0.21), swing) + uyaw;
     pitch = clamp(lerp(PITCHC, PITCH0 + 0.03 * Math.sin(t * 0.16 + 1), swing) + upitch, -1.2, 1.2);
     cyw = Math.cos(yaw); syw = Math.sin(yaw); cpt = Math.cos(pitch); spt = Math.sin(pitch);
-    S = lerp(Math.min(W / 5.4, H / 3.4), Math.min(W / 7.2, H / 4.5), fe) * zoom * (1 - explode * 0.1);
+    S = lerp(Math.min(W / 5.4, H / 3.4), Math.min(W / 7.2, H / 3.8), fe) * zoom * (1 - explode * 0.1);
     CX = W * lerp(0.5, 0.47, fe); CY = H * lerp(0.5, 0.5, fe); pivot = lerp(0, X0, fe); arrK = lerp(0.18, 1, grow);
     const front = lerp(0.5, 6.4, grow), back = lerp(-0.12, -1.8, grow);
     GROUPS.forEach((_, i) => { SC[i][0] = Math.cos(spinAng[i]); SC[i][1] = Math.sin(spinAng[i]); });
@@ -493,7 +494,7 @@
       if (kind === 1) { fa *= 1.35; ea *= 1.5; } else if (kind === 2) { fa *= 0.55; ea *= 1.1; } else if (kind === 3) { fa *= 0.3; ea *= 0.6; }
       fa = Math.min(fa, 0.2);
       if (scan > 0.02) { const yy = (PX[p + 1] + PX[p + 5]) / 2; ea += Math.max(0, 1 - Math.abs(yy - scanY) / 14) * 0.45 * scan; }
-      fa *= eg * vis; ea *= eg * vis;
+      fa *= eg * vis * 0.48; ea *= eg * vis * 0.8;
       if (fa > 0.012) FB[kind === 1 || lam > 0.55 ? 1 : 0][lvl(fa, FL)].push(q);
       if (ea > 0.04) EB[kind === 1 && facing > 0 ? 1 : 0][lvl(ea, EL)].push(q);
       if (QW[q] && facing > 0.08 && vis > 0.5 && Math.sin(t * 0.5 + QH[q]) > -0.92) WIN.push(q);
@@ -569,7 +570,7 @@
     g2.drawImage(fx, 0, 0, gl.width, gl.height);
     if (hasFilter) g2.filter = "none";
     ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = 0.95; ctx.drawImage(gl, 0, 0, W, H);
+    ctx.globalAlpha = 0.55; ctx.drawImage(gl, 0, 0, W, H);
     ctx.globalAlpha = 1; ctx.drawImage(fx, 0, 0, W, H);
     if (scan > 0.02) {
       const sg = ctx.createLinearGradient(CX - S * 3, 0, CX + S * 3, 0);
@@ -617,6 +618,7 @@
   $("shipReset")?.addEventListener("click", home);
   $("shipZoomIn")?.addEventListener("click", () => changeZoom(0.15));
   $("shipZoomOut")?.addEventListener("click", () => changeZoom(-0.15));
+  toggle("shipPin", pinned, "Show core", "Show ship");
   $("shipPin")?.addEventListener("click", () => { pinned = !pinned; toggle("shipPin", pinned, "Show core", "Show ship"); redraw(); });
   $("shipLayers")?.addEventListener("click", () => { explore = !explore; toggle("shipLayers", explore, "Close layers", "Explore layers"); redraw(); });
   toggle("shipMotion", motion, "Motion on", "Motion off");

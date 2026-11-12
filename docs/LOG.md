@@ -204,3 +204,6 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 - **Changed:** server, three providers, context reader, persona, Supabase adapter and migration,
   vault writer, first interface. Renamed from Jarvis to Envi at Kunal's request, including the tables.
 - **Verified:** Claude Haiku (5s), Codex (9s) and local qwen3.5:4b (18s) each answered a test question.
+
+## 2026-11-12 Codex - Ship reference refinement
+Enlarged rear and middle rings, added hull rails, reduced bloom, adjusted perspective and made ship view the default. Syntax, seven smoke checks and browser orbit/reset passed. Closer reconstruction, not pixel-exact. Remote push initially blocked by automatic approval review; Kunal explicitly approved the push in this chat.
