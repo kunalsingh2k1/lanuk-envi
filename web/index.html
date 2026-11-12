@@ -95,7 +95,7 @@
 
     <div class="console glass">
       <div class="console-heading"><span>ENVI <small>LANUK OFFICE</small></span><span class="ready-label">Ready when you are.</span></div>
-      <h2 class="conversation-title">What should we work on?</h2>
+      <h2 class="conversation-title"><span class="comms-dot" aria-hidden="true"></span>What should we work on?</h2>
       <ol class="log" id="log" aria-live="polite"></ol>
       <div class="quick" role="group" aria-label="Skills">
         <button type="button" data-local="status"><i class="tier t1">T1</i>Status report</button>
@@ -115,12 +115,15 @@
           </button>
           <div class="switch-pop glass" id="switchPop" role="listbox" aria-label="Choose a model" hidden></div>
         </div>
+        <div class="composer">
+        <span class="composer-prompt" aria-hidden="true">›_</span>
         <label for="input" class="sr">Message Envi</label>
-        <textarea id="input" rows="1" placeholder="Ask Envi…" maxlength="8000"></textarea>
+        <textarea id="input" rows="1" placeholder="Ask Envi, or say “Hi Envi”…" maxlength="8000"></textarea>
         <button type="button" class="icon-btn" id="micBtn" aria-label="Speak" title="Speak" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
         </button>
-        <button type="submit" class="send" id="sendBtn">Send</button>
+        <button type="submit" class="send" id="sendBtn"><span>Send</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
       </form>
       <div class="cmd-foot">
         <span class="route" id="routeChip" aria-live="polite">—</span><span id="hint">T1 skills answer instantly from your files. Everything else goes to the model shown.</span>

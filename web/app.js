@@ -169,7 +169,9 @@
   function addMsg(role, text, meta) {
     const li = el("li", `msg ${role}`);
     const body = el("div", "body"), txt = el("div", "txt", text), m = el("div", "meta");
-    body.append(txt, m); li.append(el("span", "who", role === "j" ? "Envi" : "Kunal"), body);
+    const head = el("div", "head"), when = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
+    head.append(el("span", "who", role === "j" ? "Envi" : "Kunal"), el("time", "when", when));
+    body.append(head, txt, m); li.append(el("span", "badge-av", role === "j" ? "" : "K"), body);
     if (meta) m.textContent = meta;
     log.append(li); log.scrollTop = log.scrollHeight;
     return { li, txt, meta: m };

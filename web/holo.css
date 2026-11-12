@@ -450,3 +450,164 @@ canvas.sky { position: fixed; inset: 0; z-index: -1; width: 100vw; height: 100vh
   .v-console .callout dd, .v-console .callout.hot dd { font-size: clamp(12px, 0.95vw, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .deck-strip { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 }
+
+/* ===== Comms deck (2026-11-12): futuristic chat, buttons and controls.
+   Light-edged glass, HUD corner brackets, one glowing composer capsule. Last word on these parts. ===== */
+:root {
+  --glow-a: rgba(255, 188, 56, .55);
+  --glow-c: rgba(143, 230, 255, .45);
+  --deck: linear-gradient(180deg, rgba(10, 18, 28, .78), rgba(4, 8, 13, .86));
+  --hair: linear-gradient(90deg, rgba(143, 230, 255, .5), rgba(255, 188, 56, .55) 50%, rgba(198, 166, 255, .45));
+  --star-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5C12.6 8.2 15.8 11.4 22.5 12C15.8 12.6 12.6 15.8 12 22.5C11.4 15.8 8.2 12.6 1.5 12C8.2 11.4 11.4 8.2 12 1.5Z'/%3E%3C/svg%3E");
+}
+/* every control here drops the old cut-corner shape */
+.v-console :is(.quick button, .send, .icon-btn, .switch-btn, .cmd textarea, .provider-row button),
+.ship-controls button { clip-path: none !important; background-image: none; }
+
+/* --- chat panel: glass with a light-split top edge and HUD corner brackets --- */
+.v-console .console { position: relative; background: var(--deck); border: 1px solid rgba(143, 230, 255, .14); border-radius: 18px; box-shadow: 0 20px 60px -30px #000, inset 0 1px 0 rgba(255, 255, 255, .05); }
+.v-console .console::before { content: ""; position: absolute; left: 24px; right: 24px; top: -1px; height: 1px; background: var(--hair); opacity: .8; }
+.v-console .console::after {
+  content: ""; position: absolute; inset: 6px; pointer-events: none; border-radius: 14px;
+  background:
+    linear-gradient(var(--holo), var(--holo)) top left / 14px 1.5px, linear-gradient(var(--holo), var(--holo)) top left / 1.5px 14px,
+    linear-gradient(var(--cyan), var(--cyan)) bottom right / 14px 1.5px, linear-gradient(var(--cyan), var(--cyan)) bottom right / 1.5px 14px;
+  background-repeat: no-repeat; opacity: .7;
+}
+.v-console .conversation-title { display: flex; align-items: center; gap: 10px; font: 500 clamp(16px, 1.3vw, 20px) var(--body); letter-spacing: .01em; color: var(--ice); }
+.comms-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(124, 240, 180, .15), 0 0 10px var(--ok); animation: comms 2.4s ease-in-out infinite; }
+@keyframes comms { 50% { box-shadow: 0 0 0 6px rgba(124, 240, 180, 0), 0 0 14px var(--ok); } }
+
+/* --- messages: HUD cards with an avatar badge, a coloured edge and a timestamp --- */
+.v-console .log { border: 0; gap: 10px; padding: 6px 8px 6px 0; -webkit-mask-image: linear-gradient(180deg, transparent, #000 14px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(180deg, transparent, #000 14px, #000 calc(100% - 8px), transparent); }
+.v-console .msg { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 0; border: 0; animation: msg-in .35s var(--spring) both; }
+@keyframes msg-in { from { opacity: 0; transform: translateY(8px); } }
+.badge-av { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font: 600 12px var(--mono); position: relative; }
+.msg.u .badge-av { color: #061018; background: linear-gradient(135deg, #bff2ff, #6fcfee); box-shadow: 0 0 14px rgba(143, 230, 255, .35); }
+.msg.j .badge-av { background: radial-gradient(circle at 50% 45%, rgba(255, 188, 56, .28), rgba(255, 188, 56, .05) 70%); border: 1px solid rgba(255, 188, 56, .45); }
+.msg.j .badge-av::before { content: ""; width: 18px; height: 18px; background: var(--holo); filter: drop-shadow(0 0 6px var(--holo)); -webkit-mask: var(--star-mask) center / contain no-repeat; mask: var(--star-mask) center / contain no-repeat; }
+.msg.pending .badge-av::after { content: ""; position: absolute; inset: -4px; border-radius: 14px; border: 1.5px solid transparent; border-top-color: var(--holo); border-right-color: rgba(255, 188, 56, .3); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.v-console .msg .body { position: relative; padding: 10px 14px 10px 16px; border-radius: 4px 14px 14px 14px; background: rgba(255, 255, 255, .025); border: 1px solid rgba(255, 255, 255, .05); }
+.v-console .msg .body::before { content: ""; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; }
+.msg.j .body::before { background: linear-gradient(180deg, var(--holo), rgba(255, 188, 56, .1)); box-shadow: 0 0 8px var(--glow-a); }
+.msg.u .body::before { background: linear-gradient(180deg, var(--cyan), rgba(143, 230, 255, .1)); box-shadow: 0 0 8px var(--glow-c); }
+.v-console .msg.j .body { background: linear-gradient(100deg, rgba(255, 188, 56, .055), rgba(255, 255, 255, .015) 45%); }
+.msg .head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.v-console .msg .who { font: 600 10px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--cyan); }
+.v-console .msg.j .who { color: var(--holo); }
+.msg .when { font: 400 10px var(--mono); color: var(--ice-dim); margin-left: auto; }
+.v-console .msg .txt { font: 400 14px/1.65 var(--body); color: var(--ice); max-width: 110ch; }
+.v-console .msg.u .txt { color: #d9f4ff; }
+.v-console .msg .meta { margin-top: 8px; font: 400 10px var(--mono); color: var(--ice-dim); gap: 6px 12px; align-items: center; }
+.v-console .msg .meta button { font: 500 10px var(--mono); color: var(--holo); text-decoration: none; padding: 3px 9px; border: 1px solid rgba(255, 188, 56, .35); border-radius: 999px; }
+.v-console .msg .meta button:hover { background: var(--holo-soft); }
+.v-console .msg.pending .txt:empty::before { content: "Working"; color: var(--ice-dim); font: 400 12px var(--mono); letter-spacing: .1em; }
+.v-console .msg.pending .txt::after {
+  content: ""; display: inline-block; height: 6px; margin-left: 8px; vertical-align: middle;
+  background: radial-gradient(circle, var(--holo) 2px, transparent 2.5px) 0 50% / 6px 6px repeat-x; animation: dots 1s steps(3) infinite;
+}
+@keyframes dots { from { width: 6px; } to { width: 24px; } }
+
+/* --- skills: light chips with a tier segment and a sweep of light on hover --- */
+.v-console .quick { gap: 8px; padding: 2px; }
+.v-console .quick button {
+  position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px 0 5px;
+  border: 1px solid rgba(143, 230, 255, .2) !important; border-radius: 999px !important;
+  background: linear-gradient(180deg, rgba(143, 230, 255, .07), rgba(143, 230, 255, .02)) !important;
+  color: var(--ice); font: 500 11.5px var(--body); letter-spacing: .01em; transition: border-color .2s, transform .2s var(--spring), box-shadow .2s;
+}
+.v-console .quick button::after { content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .22), transparent); transform: skewX(-20deg); transition: left .5s; }
+.v-console .quick button:hover { border-color: rgba(255, 188, 56, .7) !important; transform: translateY(-1px); box-shadow: 0 6px 18px -8px var(--glow-a); }
+.v-console .quick button:hover::after { left: 120%; }
+.v-console .quick button:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--holo); }
+.v-console .quick .tier { height: 22px; min-width: 26px; display: grid; place-items: center; border-radius: 999px; font-size: 9.5px; }
+
+/* --- model: one segmented switch with a lit selection --- */
+.v-console .provider-row { display: inline-flex; align-items: center; gap: 0; padding: 3px; border-radius: 12px; border: 1px solid rgba(143, 230, 255, .16); background: rgba(0, 0, 0, .35); height: 48px; }
+.v-console .provider-row > span { padding: 0 10px 0 8px; font: 500 9.5px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ice-dim); margin: 0; }
+.v-console .provider-row button { height: 100%; padding: 0 14px; border: 0 !important; border-radius: 9px; background: transparent !important; color: var(--ice-dim); font: 500 12px var(--body); transition: color .2s, background .2s, box-shadow .2s; }
+.v-console .provider-row button:hover { color: var(--ice); }
+.v-console .provider-row button[aria-pressed="true"] { color: #1a1000; background: linear-gradient(180deg, #ffd27a, var(--holo)) !important; box-shadow: 0 0 18px -2px var(--glow-a), inset 0 1px 0 rgba(255, 255, 255, .5); }
+.v-console .cmd .switch { height: 48px; }
+.v-console .switch-btn { height: 48px; border-radius: 12px; border: 1px solid rgba(143, 230, 255, .16) !important; background: rgba(0, 0, 0, .35) !important; padding: 0 12px; }
+.v-console .switch-btn:hover { border-color: rgba(255, 188, 56, .6) !important; }
+.v-console .switch-prov { font: 600 8.5px var(--mono); letter-spacing: .22em; }
+.v-console .switch-model { font: 500 12px var(--mono); }
+
+/* --- composer: one capsule holding the prompt, the message, the mic and Send --- */
+.v-console .cmd { display: grid; grid-template-columns: auto 150px minmax(0, 1fr); align-items: center; gap: 10px; }
+.composer {
+  position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 5px 4px 14px; border-radius: 14px; min-height: 48px;
+  background: rgba(0, 0, 0, .45); border: 1px solid rgba(143, 230, 255, .2); transition: border-color .25s, box-shadow .25s;
+}
+.composer::before { content: ""; position: absolute; inset: -1px; border-radius: 15px; padding: 1px; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: conic-gradient(from var(--spin, 0deg), var(--holo), var(--cyan), var(--violet), var(--holo));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: halo 4s linear infinite; }
+@property --spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes halo { to { --spin: 360deg; } }
+.composer:focus-within { border-color: transparent; box-shadow: 0 0 0 4px rgba(255, 188, 56, .08), 0 10px 30px -12px var(--glow-a); }
+.composer:focus-within::before { opacity: 1; }
+.composer-prompt { font: 600 13px var(--mono); color: var(--holo); text-shadow: 0 0 8px var(--glow-a); flex: none; }
+.v-console .composer textarea { flex: 1; min-width: 0; min-height: 36px; max-height: 140px; padding: 8px 4px; border: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ice); font: 400 14px/1.45 var(--body); }
+.v-console .composer textarea:focus { outline: none; }
+.v-console .composer textarea::placeholder { color: rgba(156, 170, 180, .75); }
+.v-console .composer .icon-btn { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(143, 230, 255, .25) !important; background: rgba(143, 230, 255, .05) !important; }
+.v-console .composer .icon-btn[hidden] { display: none; }
+.v-console .composer .icon-btn:hover { border-color: var(--cyan) !important; box-shadow: 0 0 12px -2px var(--glow-c); }
+.v-console .composer .icon-btn.live { border-color: var(--crit) !important; box-shadow: 0 0 0 4px rgba(255, 122, 107, .15); }
+.v-console .composer .send {
+  flex: none; width: auto; height: 38px; padding: 0 16px 0 18px; display: inline-flex; align-items: center; gap: 8px; border-radius: 11px; border: 0;
+  background: linear-gradient(180deg, #ffd27a, var(--holo) 55%, #e89a10) !important; color: #1a1000; font: 600 12px var(--body); letter-spacing: .04em; text-transform: none;
+  box-shadow: 0 0 20px -4px var(--glow-a), inset 0 1px 0 rgba(255, 255, 255, .55); transition: transform .2s var(--spring), box-shadow .2s;
+}
+.v-console .composer .send svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s var(--spring); }
+.v-console .composer .send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 28px -2px var(--glow-a), inset 0 1px 0 rgba(255, 255, 255, .55); }
+.v-console .composer .send:hover:not(:disabled) svg { transform: translateX(3px); }
+.v-console .composer .send:disabled { opacity: .45; filter: saturate(.4); }
+.v-console .composer .send:focus-visible, .v-console .composer .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ice); }
+.route { display: inline-flex; align-items: center; gap: 7px; }
+.route::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--holo); box-shadow: 0 0 8px var(--holo); }
+.v-console .cmd-foot .link-btn { font: 500 10px var(--mono); letter-spacing: .14em; color: var(--ice-dim); padding: 3px 6px; border-radius: 6px; }
+.v-console .cmd-foot .link-btn:hover, .v-console .cmd-foot .link-btn[aria-pressed="true"] { color: var(--holo); background: var(--holo-soft); }
+
+/* --- ship controls: one glass bar --- */
+.ship-controls { left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); gap: 2px; padding: 4px; border-radius: 14px;
+  background: rgba(4, 9, 15, .62); border: 1px solid rgba(143, 230, 255, .16); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.ship-controls button { height: 28px; padding: 0 11px; border: 0 !important; border-radius: 10px !important; background: transparent !important; color: var(--ice-dim); font: 500 10px var(--mono); letter-spacing: .06em; }
+.ship-controls button:hover { color: var(--ice); background: rgba(255, 255, 255, .06) !important; }
+.ship-controls button[aria-pressed="true"] { color: var(--holo); background: var(--holo-soft) !important; box-shadow: inset 0 0 0 1px rgba(255, 188, 56, .4); }
+.ship-controls #shipZoomOut, .ship-controls #shipZoomIn { width: 28px; padding: 0; font-size: 14px; }
+
+/* --- rails: same glass and light edge --- */
+.rail-box { position: relative; background: var(--deck); border-color: rgba(143, 230, 255, .14); border-radius: 16px; }
+.rail-box::before { content: ""; position: absolute; left: 18px; right: 18px; top: -1px; height: 1px; background: var(--hair); opacity: .6; }
+.voice-toggle { border-radius: 999px; transition: border-color .2s, box-shadow .2s; }
+.voice-toggle:hover { border-color: var(--holo); box-shadow: 0 0 14px -4px var(--glow-a); }
+
+@media (max-width: 1100px) {
+  .v-console .cmd { grid-template-columns: minmax(0, 1fr) 150px; }
+  .v-console .provider-row { grid-column: 1; }
+  .v-console .cmd .switch { grid-column: 2; width: auto; }
+  .composer { grid-column: 1 / -1; }
+}
+@media (max-width: 860px) {
+  .v-console .cmd { grid-template-columns: minmax(0, 1fr) 110px; gap: 6px; }
+  .v-console .provider-row { height: 40px; } .v-console .provider-row > span { display: none; }
+  .v-console .provider-row button { flex: 1; padding: 0 8px; }
+  .v-console .cmd .switch, .v-console .switch-btn { height: 40px; }
+  .v-console .msg { grid-template-columns: 28px minmax(0, 1fr); gap: 8px; }
+  .badge-av { width: 28px; height: 28px; border-radius: 9px; }
+  .v-console .msg .body { padding: 8px 10px 8px 12px; }
+  .v-console .msg .txt { font-size: 13px; }
+  .composer-prompt { display: none; }
+  .v-console .composer .send span { display: none; }
+  .v-console .composer .send { padding: 0 12px; }
+  .ship-controls { left: 6px; right: 6px; transform: none; width: auto; overflow-x: auto; scrollbar-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v-console .msg, .comms-dot, .composer::before, .msg.pending .badge-av::after, .v-console .msg.pending .txt::after { animation: none; }
+  .v-console .quick button::after { display: none; }
+}
+@media (max-width: 860px) { .v-console .conversation-title { display: none; } }
+.v-console .quick button { flex: none; }

@@ -5,6 +5,17 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Comms deck: futuristic chat and controls
+
+- **Changed:** last section of `web/holo.css` ("Comms deck"). Chat panel is glass with a light-split
+  top edge and corner brackets. Messages are cards with an avatar badge (Envi star or K), a glowing
+  side edge and a timestamp; a spinning ring and dots while Envi works. Skills are light chips with a
+  shine on hover. Provider buttons are one segmented switch. The message box, mic and Send sit in one
+  capsule with a moving light ring while typing. Ship controls are one glass bar. `index.html`: composer
+  wrapper, Send arrow, status dot. `app.js`: message header with time.
+- **Verified:** `npm run check` 7/7; 1440x900 and 375x812 with no page scroll; read-out messages render.
+- **Not verified:** a real mouse on the hover effects; Safari (uses `@property` for the ring).
+
 ## 2026-11-12 · Claude · Star system: files as stars, Memory tab, particle face, skills, tiers, events
 
 - **From:** Kunal's references in `C:\AI OFFICE\Context\` (15 images, 3 videos; frames reviewed with ffmpeg).
