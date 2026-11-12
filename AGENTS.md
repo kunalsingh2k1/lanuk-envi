@@ -56,6 +56,7 @@ If port 4777 is busy, another copy is running. Do not start a second one; find a
   read-only sandbox. The Apps switch gives Claude, Codex and local models only the eight read + draft tools in Envi's hub,
   `server/connectors.js`, using Envi's own Google sign-in (Kunal's decisions, 2026-11-12). Never add a tool that sends,
   deletes, shares or edits. Never read `envi/.secrets/`.
+  MCP servers live in `mcp-servers.json`; add a tool to a server's `allow` list only when Kunal asks, and only read or draft tools.
   Do not widen that without Kunal asking for it in the current conversation.
 - **Do not change client systems or other projects** (`C:\Ai\SInghatax`, Zoho, n8n, Hermes config).
 - **Supabase:** only the `envi_*` tables are Envi's. The same project holds the Lanuk.X website tables.

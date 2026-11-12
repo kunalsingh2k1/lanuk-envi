@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "echo": {
+      "enabled": false,
+      "command": "node",
+      "args": ["scripts/mcp-echo.js"],
+      "cwd": "C:/AI OFFICE/envi",
+      "allow": ["count_words"]
+    }
+  }
+}

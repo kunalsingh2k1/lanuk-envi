@@ -5,6 +5,19 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Any MCP server can join the hub
+
+- **Decided by Kunal:** general MCP support ("let me add any"), first real server to be chosen together.
+- **Changed:** `server/mcp-client.js` (stdio and Streamable HTTP client, `${NAME}` keys from `.env`, local
+  servers in their own console). `mcp-servers.json` (+ `.example`): servers and per-server `allow` lists.
+  `connectors.js`: the hub merges allowed tools as `<server>__<tool>` for every provider; a server that
+  fails is skipped and reported in `/api/apps`. `npm run mcp [-- name]` lists a server's tools.
+  `scripts/mcp-echo.js` is a two-tool test server (left in the config, disabled).
+- **Verified:** helper listed 2 tools / 1 allowed; `/api/apps` showed the server; bridge ran
+  `echo__count_words` ("4") and refused `echo__echo`; local qwen3.5:4b and Claude Haiku each used the
+  tool through Envi (answers 5 and 7, both right); server stayed up.
+- **Not verified:** a web (HTTP) MCP server; any real third-party server yet.
+
 ## 2026-11-12 · Claude · Google connected; real reads verified
 
 - **Done by Kunal (guided step by step):** Google Cloud project "Envi"; Gmail, Calendar, Drive, Sheets APIs

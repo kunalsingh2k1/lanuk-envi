@@ -77,6 +77,7 @@ All routes are under `/api`. Every non-GET request must carry the header `x-envi
 | `POST /api/chat` | Body `{provider, model, conversationId, messages, apps}`. Streams Server-Sent Events: `meta` (with `sources`), `thinking`, `text`, `tool` (an app step, with a plain label), `done`, `error`. `apps` works for every provider. |
 | `GET /api/apps` | Access level (read + drafts), Google connection status and the hub's tools. |
 | `GET /api/google/connect`, `GET /oauth/google/callback`, `POST /api/google/disconnect` | Envi's own Google sign-in. |
+| `envi/mcp-servers.json` | MCP servers Envi connects to (local programs or web URLs). Only tools in each server's `allow` list join the hub, named `<server>__<tool>`. Keys as `${NAME}` from `.env`. `npm run mcp [-- name]` lists them. Client: `server/mcp-client.js`. |
 | `GET /api/tools`, `POST /api/tools/call` | For `server/mcp-bridge.js` only (one-time token). The bridge is how Claude and Codex use the hub. |
 | `GET /api/memory`, `GET /api/memory/file?id=` | Every vault, agent and brain file (the stars) and a read-only preview. |
 

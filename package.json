@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "check": "node server/selftest.js"
+    "check": "node server/selftest.js",
+    "mcp": "node server/mcp-tools.js"
   },
   "engines": {
     "node": ">=20"

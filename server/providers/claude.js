@@ -6,7 +6,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { runLines, transcript, SANDBOX_DIR } from "./util.js";
-import { TOOLS } from "../connectors.js";
+import { allTools } from "../connectors.js";
 
 const BRIDGE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "mcp-bridge.js");
 const BLOCKED_BUILTINS = "Bash,Edit,Write,Read,Glob,Grep,WebFetch,WebSearch,NotebookEdit,Task,Agent,TodoWrite,Skill,KillShell,BashOutput";
@@ -40,7 +40,7 @@ export async function stream({ model, system, messages, onText, onTool, apps = f
     }
     const toolArgs = apps
       ? ["--strict-mcp-config", "--mcp-config", mcpFile, "--disallowedTools", BLOCKED_BUILTINS,
-         "--allowedTools", ["ToolSearch", ...TOOLS.map((t) => `mcp__envi__${t.name}`)].join(",")]   // only Envi's tools; anything else is refused
+         "--allowedTools", ["ToolSearch", ...(await allTools()).map((t) => `mcp__envi__${t.name}`)].join(",")]   // only Envi's tools; anything else is refused
       : ["--tools", "", "--strict-mcp-config"];                                                    // no tools and no MCP servers: Envi only talks
     await runLines("claude", [
       "-p",

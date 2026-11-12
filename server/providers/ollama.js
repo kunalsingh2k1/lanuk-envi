@@ -31,12 +31,12 @@ export async function stream({ model, system, messages, onText, onThinking, apps
   let shown = "";
   for (let i = 0; i < MAX_ROUNDS; i++) {
     let r;
-    try { r = await round({ model, msgs, tools: ollamaTools(), onText: (t) => onText(shown + t), onThinking, signal }); }
+    try { r = await round({ model, msgs, tools: await ollamaTools(), onText: (t) => onText(shown + t), onThinking, signal }); }
     catch (e) {
       // Thinking models (qwen3.5) sometimes spend the whole turn reasoning after a tool result and say
       // nothing. Ask once more with reasoning off, so the answer to the tool result actually arrives.
       if (e.code === "empty" && msgs.some((m) => m.role === "tool")) {
-        try { r = await round({ model, msgs, tools: ollamaTools(), think: false, onText: (t) => onText(shown + t), onThinking, signal }); }
+        try { r = await round({ model, msgs, tools: await ollamaTools(), think: false, onText: (t) => onText(shown + t), onThinking, signal }); }
         catch (e2) { if (e2.code === "empty") return { text: shown || "I read your apps but the local model gave no answer. Try Claude for this one.", model }; throw e2; }
       } else if (/does not support tools/i.test(e.message)) {
         const plain = await round({ model, msgs, onText: (t) => onText(`(${model} can't use apps, so this answer is from memory only.)\n\n` + t), onThinking, signal });

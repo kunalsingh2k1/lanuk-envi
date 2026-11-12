@@ -67,9 +67,9 @@ app.patch("/api/missions/:id", async (c) => {
 app.get("/api/stats", async (c) => c.json({ replies: await store.recentReplies() }));
 
 // ---- apps: Envi's own Google sign-in and the connector hub (read + drafts) ----
-app.get("/api/apps", (c) => c.json(appsStatus()));
+app.get("/api/apps", async (c) => c.json(await appsStatus()));
 app.get("/api/google/connect", (c) => c.redirect(google.authUrl()));
-app.post("/api/google/disconnect", (c) => { google.disconnect(); return c.json(appsStatus()); });
+app.post("/api/google/disconnect", async (c) => { google.disconnect(); return c.json(await appsStatus()); });
 app.get("/oauth/google/callback", async (c) => {
   const page = (title, text) => c.html(`<!doctype html><meta charset="utf-8"><title>${title}</title><body style="background:#04070c;color:#eef1f2;font:15px system-ui;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><h2 style="color:#ffbc38">${title}</h2><p>${text}</p><p><a href="/#console" style="color:#8fe6ff">Back to Envi</a></p></div>`);
   if (c.req.query("error")) return page("Google not connected", "You cancelled, or Google refused. Nothing was saved.");
@@ -78,7 +78,7 @@ app.get("/oauth/google/callback", async (c) => {
 });
 // The MCP bridge lists and calls tools here. Only the bridge knows the token.
 const bridgeOnly = (c) => c.req.header("x-envi-tool-token") === TOOL_TOKEN;
-app.get("/api/tools", (c) => (bridgeOnly(c) ? c.json({ mcp: mcpTools() }) : c.json({ error: { code: "forbidden", message: "Bridge only." } }, 403)));
+app.get("/api/tools", async (c) => (bridgeOnly(c) ? c.json({ mcp: await mcpTools() }) : c.json({ error: { code: "forbidden", message: "Bridge only." } }, 403)));
 app.post("/api/tools/call", async (c) => {
   if (!bridgeOnly(c)) return c.json({ error: { code: "forbidden", message: "Bridge only." } }, 403);
   const { name, args } = await c.req.json().catch(() => ({}));

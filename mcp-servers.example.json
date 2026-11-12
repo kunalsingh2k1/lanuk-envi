@@ -1,0 +1,25 @@
+{
+  "_help": [
+    "Copy a block into mcp-servers.json under \"servers\". The key (e.g. \"notion\") is the server's short name.",
+    "Local program: \"command\" and \"args\". Web server: \"url\" and optional \"headers\".",
+    "Never put a key here. Write \"${NAME}\" and put NAME=value in envi/.env yourself.",
+    "\"allow\" lists the tools the models may use. Empty = the server is connected but exposes nothing.",
+    "See every tool a server offers: npm run mcp -- <name>. Allow only tools that read or make drafts.",
+    "After editing, restart Envi."
+  ],
+  "servers": {
+    "example-local": {
+      "enabled": false,
+      "command": "npx",
+      "args": ["-y", "some-mcp-server-package"],
+      "env": { "SOME_API_KEY": "${SOME_API_KEY}" },
+      "allow": ["search", "get_item"]
+    },
+    "example-web": {
+      "enabled": false,
+      "url": "https://example.com/mcp",
+      "headers": { "Authorization": "Bearer ${EXAMPLE_TOKEN}" },
+      "allow": []
+    }
+  }
+}
