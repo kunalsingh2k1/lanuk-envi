@@ -1,5 +1,23 @@
 # Design system
 
+## Flight Deck revision · 2026-11-12
+
+Kunal selected visual concept 2 in Codex. The final section of `web/holo.css` now owns
+the Flight Deck overrides; the older tokens and component descriptions below document
+the previous styling where superseded here.
+
+- Amber `#ffbc38` is now the action/selection colour; body background is `#070d12`,
+  primary text `#eef1f2`, secondary text `#9caab4`.
+- Always-visible top navigation replaces the collapsed notch presentation. All five tabs remain.
+- Desktop console uses a 1.6:1 spacecraft/conversation split and a full-width four-value footer.
+- `web/assets/flight-deck.png` is generated spacecraft/orbital artwork. Inspect 3D switches to
+  the existing interactive canvas. The artwork itself is static.
+- Chat uses separated text rows, amber provider buttons, and the existing detailed model menu.
+- The right stats dock is visually hidden; its data remains accessible in Activity.
+- At widths <=860px the artwork and read-outs sit above chat; the composer stays visible.
+- Existing font families and voice/chat/data handlers are retained. The footer uses existing
+  launch, mission, selected-model and AI-stack values, not fictional ship telemetry.
+
 The rules behind Envi's look. The source of truth is the CSS in `web/`; this file names the tokens
 and patterns so a change stays consistent. Direction: a holographic ship console. Dark only.
 

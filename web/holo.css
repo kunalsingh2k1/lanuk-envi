@@ -152,3 +152,133 @@ body::after {
 }
 @media (prefers-reduced-motion: reduce) { .quick button { transition: none; } }
 .sub { max-width: none; }
+
+/* Flight Deck — selected design 2. Keep existing DOM/data hooks and 3D inspection. */
+:root {
+  --void: #070d12; --deep: #0b151d; --slab: #090f14;
+  --ice: #eef1f2; --ice-dim: #9caab4; --cyan: #b8e5f2;
+  --holo: #ffbc38; --hot: #ffbc38; --holo-soft: rgba(255,188,56,.12);
+  --edge-hi: rgba(255,188,56,.65); --edge: rgba(207,224,235,.3);
+  --line: rgba(207,224,235,.16); --plane: rgba(7,13,18,.9);
+}
+body { padding: 0 32px 24px; background: var(--void); }
+body::before, body::after, .sky::before, .sky::after { display: none; }
+.sky { background: var(--void); }
+.telemetry { max-width: none; min-height: 78px; padding: 18px 0; flex-wrap: nowrap; }
+.mark { gap: 20px; }
+.mark::before { display: none; }
+.mark-name { font-size: 28px; letter-spacing: .17em; text-shadow: none; }
+.mark-sub { border-left: 1px solid var(--edge); padding-left: 20px; text-transform: uppercase; color: var(--ice); letter-spacing: .18em; }
+.tele { gap: 12px; }
+.tele li { font-size: 10px; }
+.tele li:nth-child(-n+4) { display: none; }
+.tele .v { color: var(--ice); }
+.notch { position: absolute; width: 46%; max-width: 660px; top: 12px; left: 53%; }
+.notch .notch-slab, .notch.busy .notch-slab, .notch.open .notch-slab { transform: none; background: transparent; border-radius: 0; box-shadow: none; }
+.notch::after, .notch-slab::before, .notch-slab::after, .notch-handle, .notch-status { display: none; }
+.notch .tabs { height: 54px; padding: 0; gap: 12px; }
+.notch .tabs button { flex-direction: row; font-size: 12px; letter-spacing: .14em; clip-path: none; background: none; border-radius: 0; border-bottom: 2px solid transparent; color: var(--ice-dim); }
+.notch .tabs button svg, .notch .tabs .badge { display: none; }
+.notch .tabs button[aria-selected="true"] { background: none; color: var(--holo); border-bottom: 2px solid var(--holo); }
+.views { max-width: none; padding: 22px 0 0; }
+.v-console { position: relative; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0; padding-bottom: 110px; overflow: visible; }
+.v-console .core { display: flex; justify-content: stretch; position: static; grid-column: auto; order: 0; }
+.v-console .holo { display: block; width: 100%; aspect-ratio: auto; max-width: none; height: 100%; position: static; }
+.v-console .dial { width: 100%; height: 100%; aspect-ratio: auto; margin: 0; }
+.ship-art { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--void); }
+.dial canvas, .dial .hud, .dial .holo-mode { display: none; }
+.dial::after { display: none; }
+.dial.inspecting .ship-art { display: none; }
+.dial.inspecting canvas { display: block; }
+.dial.inspecting .hud, .dial.inspecting .holo-mode { display: flex; }
+.inspect-ship { position: absolute; bottom: 16px; left: 20px; border: 1px solid var(--edge); color: var(--ice); background: var(--plane); padding: 8px 14px; font: 11px var(--mono); cursor: pointer; z-index: 2; }
+.inspect-ship:hover, .inspect-ship[aria-pressed="true"] { color: var(--holo); border-color: var(--holo); }
+.v-console .callouts { position: absolute; top: auto; right: auto; bottom: 0; left: 0; width: 100%; height: 84px; margin: 0; padding: 16px 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-block: 1px solid var(--edge); gap: 0; }
+.callout { padding: 0 24px; border-left: 1px solid var(--edge); }
+.callout:first-child { padding-left: 12px; border-left: 3px solid var(--holo); }
+.callout dt { color: var(--ice-dim); font-size: 11px; margin-bottom: 6px; }
+.callout dd, .callout.hot dd { background: none; clip-path: none; color: var(--holo); padding: 0; font-size: clamp(14px,1.4vw,24px); }
+.core > .greet, .core > .sub { display: none; }
+.glass { background: var(--plane); background-image: none; clip-path: none; border: 1px solid var(--line); box-shadow: none; }
+.glass::before, .glass::after { display: none; }
+.v-console .console { padding: 0 0 0 26px; border: 0; border-left: 1px solid var(--edge); background: var(--void); gap: 14px; overflow: visible; }
+.console-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0 18px; border-bottom: 1px solid var(--edge); }
+.console-heading > span:first-child { font: 700 24px var(--wide); letter-spacing: .12em; }
+.console-heading small { display: block; margin-top: 6px; color: var(--ice-dim); font: 10px var(--mono); letter-spacing: .2em; }
+.ready-label { font-size: 12px; font-style: italic; color: var(--ice-dim); }
+.conversation-title { color: var(--holo); font: 400 clamp(18px,1.6vw,26px) var(--body); margin: 0; padding-bottom: 14px; border-bottom: 1px solid var(--edge); }
+.v-console .log { margin: 0; padding: 0 8px 0 0; scrollbar-width: thin; }
+.msg { padding: 20px 0; border-bottom: 1px solid var(--edge); grid-template-columns: 64px minmax(0,1fr); }
+.msg .who { font: 500 11px/1.8 var(--mono); color: var(--ice); letter-spacing: .08em; }
+.msg.j .who { color: var(--holo); text-shadow: none; }
+.msg .txt { font-size: 14px; line-height: 1.7; color: var(--ice); }
+.quick { gap: 6px; }
+.quick button { font-size: 10px; padding: 7px 9px; background: transparent; clip-path: none; color: var(--ice-dim); }
+.cmd { display: grid; grid-template-columns: 118px minmax(0,1fr) 40px 68px; gap: 8px; align-items: stretch; }
+.provider-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 6px 0 8px; }
+.provider-row > span { font-size: 11px; margin-right: auto; color: var(--ice-dim); }
+.provider-row button { background: transparent; border: 1px solid var(--edge); padding: 9px 14px; font-size: 12px; cursor: pointer; }
+.provider-row button[aria-pressed="true"] { color: var(--holo); border-color: var(--holo); background: var(--holo-soft); }
+.provider-row button:disabled { opacity: .4; cursor: not-allowed; }
+.switch { min-width: 0; }
+.switch-btn { min-width: 0; width: 100%; height: 100%; background: transparent; clip-path: none; border: 1px solid var(--edge); }
+.switch-prov { color: var(--holo); font-size: 9px; }
+.switch-model { font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+.cmd textarea { min-width: 0; width: 100%; min-height: 54px; background: transparent; clip-path: none; font-size: 13px; padding: 14px 10px; order: 0; }
+.cmd .send { background: var(--holo); color: var(--void); font-size: 12px; letter-spacing: .03em; }
+.icon-btn { background: transparent; }
+.cmd-foot { flex-wrap: wrap; gap: 8px; padding-bottom: 2px; }
+.cmd-foot #hint { font-size: 10px; color: var(--ice-dim); }
+.link-btn { color: var(--ice-dim); font-size: 10px; }
+.switch-pop { width: min(390px, calc(100vw - 40px)); max-height: min(430px,55dvh); background: var(--deep); z-index: 80; }
+.opt[aria-selected="true"] { background: var(--holo-soft); }
+.dock { display: none; }
+:focus-visible { outline: 2px solid var(--holo); outline-offset: 3px; }
+@media (max-width: 1300px) {
+  .cmd .switch { grid-column: 1 / -1; width: 150px; }
+  .cmd .switch-btn { display: flex; gap: 10px; align-items: center; padding: 6px 10px; }
+  .cmd textarea { grid-column: span 2; }
+  .v-console .console { gap: 10px; }
+}
+@media (max-width: 1100px) {
+  body { padding: 0 20px 16px; }
+  .mark-sub { display: none; }
+  .notch { width: 60%; left: 52%; }
+  .v-console { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); }
+  .provider-row { gap: 6px; }
+  .provider-row button { padding: 9px 10px; }
+  .cmd { grid-template-columns: 95px minmax(0,1fr) 34px 55px; gap: 5px; }
+  .ready-label { display: none; }
+}
+@media (max-width: 860px) {
+  body { padding: 0 14px 10px; }
+  .telemetry { min-height: 55px; padding: 14px 0; }
+  .mark-name { font-size: 22px; }
+  .notch { position: static; transform: none; width: 100%; max-width: none; flex: none; }
+  .notch .tabs { height: 45px; gap: 4px; }
+  .notch .tabs button { font-size: 10px; letter-spacing: .04em; }
+  .views { padding-top: 10px; }
+  .v-console { grid-template-columns: minmax(0,1fr); grid-template-rows: 22dvh minmax(0,1fr); padding-bottom: 0; gap: 10px; }
+  .v-console .core { display: block; }
+  .ship-art { object-fit: cover; object-position: center 45%; }
+  .v-console .callouts { position: absolute; top: 0; bottom: auto; right: 0; left: auto; height: 22dvh; width: 42%; background: var(--plane); grid-template-columns: 1fr 1fr; padding: 10px; border: 0; gap: 10px; }
+  .callout, .callout:first-child { padding: 0; border: 0; }
+  .callout dt { font-size: 8px; }
+  .callout dd, .callout.hot dd { font-size: 10px; white-space: normal; }
+  .inspect-ship { bottom: 8px; left: 8px; padding: 6px 8px; font-size: 9px; }
+  .v-console .console { padding: 0; border-left: 0; gap: 8px; }
+  .console-heading { display: none; }
+  .conversation-title { font-size: 18px; padding: 4px 0 10px; }
+  .msg { grid-template-columns: 48px minmax(0,1fr); padding: 12px 0; }
+  .msg .txt { font-size: 13px; }
+  .provider-row > span { font-size: 10px; }
+  .provider-row button { flex: 1; padding: 7px 6px; font-size: 11px; }
+  .cmd { grid-template-columns: 88px minmax(0,1fr) 34px 52px; }
+  .cmd textarea { min-height: 48px; padding: 10px 8px; font-size: 12px; }
+  .cmd-foot { gap: 0; }
+}
+@media (max-height: 650px) and (max-width: 860px) {
+  .v-console { grid-template-rows: 15dvh minmax(0,1fr); }
+  .v-console .callouts { height: 15dvh; }
+  .conversation-title { display: none; }
+}

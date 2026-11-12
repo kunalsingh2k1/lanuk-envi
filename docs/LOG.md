@@ -5,6 +5,18 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Codex · Flight Deck interface (selected design 2)
+
+- **Changed:** amber/white desktop layout, generated orbital spacecraft art, visible navigation,
+  conversation rail, provider shortcuts, and responsive key-number strip. Inspect 3D preserves
+  access to the interactive canvas. No backend or provider permissions changed.
+- **Verified:** all seven smoke checks; browser provider switching, detailed model menu,
+  instant status read-out, Missions navigation, 3D toggle and keyboard input. Desktop 1914x916
+  and phone 390x844 inspected; browser console had no errors. See `design-qa.md`.
+- **Chat test:** local qwen3.5:4b returned `UI check passed.` in 44.6 seconds through the UI.
+- **Not verified:** microphone, wake phrase, paid model replies. A separate concurrent edit
+  to `web/hologram.js` was observed and preserved, not authored by this change.
+
 ## 2026-11-12 · Claude · Project docs and smoke test
 
 - **Changed:** added `AGENTS.md`, `CLAUDE.md` and `docs/` (STATUS, LOG, PRD, ARCHITECTURE, DESIGN_SYSTEM,

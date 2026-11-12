@@ -6,6 +6,10 @@ date given. **Built** means the code exists but that path was not exercised end 
 
 ## Done
 
+2026-11-12 Codex: selected Flight Deck design 2 applied to the existing interface.
+Visible navigation, spacecraft artwork with Inspect 3D, amber provider controls, desktop
+and phone layouts verified. Details and limitations: `../design-qa.md` and `LOG.md`.
+
 | Area | State | Evidence |
 | --- | --- | --- |
 | Server on `127.0.0.1:4777` (Hono, Node) | Verified 2026-11-12 | `npm run check` passes 7 checks |

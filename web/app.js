@@ -189,6 +189,10 @@
     $("#switchProv").textContent = p.label; $("#switchModel").textContent = m.label;
     $("#tLink").textContent = `${p.label} · ${m.label}`;
     $("#coModel").textContent = `${p.label} · ${m.label}`;
+    document.querySelectorAll("[data-provider]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.provider === p.id));
+      button.disabled = !providers.find((item) => item.id === button.dataset.provider)?.models.length;
+    });
     store.set("envi.model", choice); emit("model");
   }
   function buildPop() {
@@ -209,6 +213,18 @@
   }
   function togglePop(open) { pop.hidden = !open; sbtn.setAttribute("aria-expanded", String(open)); if (open) { buildPop(); pop.querySelector('[aria-selected="true"]')?.focus(); } }
   sbtn.addEventListener("click", () => togglePop(pop.hidden));
+  document.querySelectorAll("[data-provider]").forEach((button) => button.addEventListener("click", () => {
+    const provider = providers.find((item) => item.id === button.dataset.provider);
+    if (!provider?.models.length) return;
+    if (choice.provider !== provider.id) choice = { provider: provider.id, model: provider.models[0].id };
+    paintChoice();
+  }));
+  $("#inspectShip").addEventListener("click", () => {
+    const inspecting = $("#holoBox").classList.toggle("inspecting");
+    $("#inspectShip").setAttribute("aria-pressed", String(inspecting));
+    $("#inspectShip").textContent = inspecting ? "Close 3D" : "Inspect 3D";
+    if (inspecting) window.dispatchEvent(new Event("resize"));
+  });
   document.addEventListener("click", (e) => { if (!pop.hidden && !e.target.closest(".switch")) togglePop(false); });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !pop.hidden) { togglePop(false); sbtn.focus(); }
@@ -397,7 +413,7 @@
   }
   async function loadModels() { try { providers = (await api("/api/models")).providers; paintChoice(); } catch { $("#tLink").textContent = "offline"; } }
 
-  addMsg("j", "Online, Kunal. Choose a model beside the message box, then ask. The four buttons below give instant read-outs without using any model.");
+  addMsg("j", "Ready, Kunal. What would you like to work on? Choose Claude, Codex or a local model below, or start with a quick read-out.");
   tick(); setInterval(tick, 1000);
   loadState(); loadModels(); loadWall();
   setInterval(loadState, 60_000);

@@ -49,6 +49,8 @@
     <div class="core">
       <div class="holo">
         <div class="dial" id="holoBox">
+          <img class="ship-art" src="/assets/flight-deck.png" alt="Cyan holographic ring spacecraft above Earth’s orbital horizon">
+          <button type="button" class="inspect-ship" id="inspectShip" aria-pressed="false">Inspect 3D</button>
           <canvas id="holo" tabindex="0" role="img" aria-label="Envi station hologram. Drag or use the arrow keys to turn it."></canvas>
           <div class="hud hud-tl" aria-hidden="true"><b>ENVI-01</b><span id="hudState">Orbit stable</span></div>
           <div class="hud hud-tr" aria-hidden="true"><span>Yaw <i id="hudYaw">000</i>°</span><span>Pitch <i id="hudPitch">+00</i>°</span><span>Layers <i id="hudLayers">00</i>%</span></div>
@@ -67,6 +69,8 @@
     </div>
 
     <div class="console glass">
+      <div class="console-heading"><span>ENVI <small>LANUK OFFICE</small></span><span class="ready-label">Ready when you are.</span></div>
+      <h2 class="conversation-title">What should we work on?</h2>
       <ol class="log" id="log" aria-live="polite"></ol>
       <div class="quick" role="group" aria-label="Instant read-outs (no model usage)">
         <button type="button" data-local="status">Status report</button>
@@ -75,6 +79,7 @@
         <button type="button" data-local="clients">Client briefs</button>
       </div>
       <form class="cmd" id="cmd" autocomplete="off">
+        <div class="provider-row" role="group" aria-label="Choose provider"><span>Choose model</span><button type="button" data-provider="claude" aria-pressed="false">Claude</button><button type="button" data-provider="codex" aria-pressed="false">Codex</button><button type="button" data-provider="local" aria-pressed="false">Local</button></div>
         <div class="switch">
           <button type="button" class="switch-btn" id="switchBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="switchPop">
             <span class="switch-prov" id="switchProv">Claude</span>
@@ -83,7 +88,7 @@
           <div class="switch-pop glass" id="switchPop" role="listbox" aria-label="Choose a model" hidden></div>
         </div>
         <label for="input" class="sr">Message Envi</label>
-        <textarea id="input" rows="1" placeholder="Ask Envi…  (Enter to send)" maxlength="8000"></textarea>
+        <textarea id="input" rows="1" placeholder="Ask Envi…" maxlength="8000"></textarea>
         <button type="button" class="icon-btn" id="micBtn" aria-label="Speak" title="Speak" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
         </button>
