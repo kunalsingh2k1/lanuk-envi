@@ -5,6 +5,14 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · Hermes now uses Claude (outside this repo)
+
+- Kunal made a Claude plan token and added it to Hermes' `.env` himself. Hermes: logged in to Anthropic;
+  default model `claude-sonnet-5-5`; Ollama `qwen3.5` as fallback; gateway restarted and running.
+  Details and backup path: brain `topics/hermes-and-claude.md`. Envi itself unchanged.
+- **Verified:** one-off and default `hermes -z` runs answered through Claude; fallback chain listed; gateway running.
+- **Not verified:** a real Telegram message through Claude; the fallback actually triggering.
+
 ## 2026-11-12 · Claude · Motion system across the whole interface
 
 - **Asked:** use prompt-motion.com to add motion across the system. The site is a gallery of motion videos and
