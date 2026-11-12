@@ -1,11 +1,39 @@
 {
   "servers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/readonly",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_MCP_TOKEN}"
+      },
+      "allow": [
+        "get_me",
+        "search_repositories",
+        "get_file_contents",
+        "search_code",
+        "list_branches",
+        "list_commits",
+        "get_commit",
+        "search_commits",
+        "list_issues",
+        "issue_read",
+        "search_issues",
+        "list_pull_requests",
+        "pull_request_read",
+        "search_pull_requests",
+        "list_releases",
+        "get_latest_release"
+      ]
+    },
     "echo": {
       "enabled": false,
       "command": "node",
-      "args": ["scripts/mcp-echo.js"],
+      "args": [
+        "scripts/mcp-echo.js"
+      ],
       "cwd": "C:/AI OFFICE/envi",
-      "allow": ["count_words"]
+      "allow": [
+        "count_words"
+      ]
     }
   }
 }

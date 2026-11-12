@@ -126,24 +126,25 @@
 .radial-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .radial .base { fill: #0a0f10; stroke: var(--slab-edge); }
 .seg { cursor: pointer; outline: none; }
-.seg path { fill: rgba(255, 255, 255, .07); stroke: rgba(255, 255, 255, .07); stroke-width: 5; stroke-linejoin: round; transition: fill .14s, stroke .14s; }
+.seg > path { fill: rgba(255, 255, 255, .035); stroke: rgba(214, 230, 240, .12); stroke-width: 1; stroke-linejoin: round; transition: fill .22s, stroke .22s; }
 .seg .ico { color: rgba(214, 243, 255, .62); transition: color .14s; }
-.seg:hover path, .seg:focus-visible path { fill: rgba(255, 255, 255, .16); stroke: rgba(255, 255, 255, .16); }
+.seg:hover > path, .seg:focus-visible > path { fill: rgba(255, 255, 255, .08); stroke: rgba(255, 255, 255, .3); }
 .seg:hover .ico, .seg:focus-visible .ico { color: var(--ice); }
-.seg.on path { fill: var(--holo); stroke: var(--holo); }
-.seg.on .ico { color: #061000; }
-.seg:focus-visible path { stroke: var(--ice); stroke-width: 2; }
+.seg.on > path { fill: rgba(255, 188, 56, .12); stroke: rgba(255, 188, 56, .65); }
+.seg.on .ico { color: var(--holo); }
+.seg .ico path { fill: none; stroke: currentColor; stroke-width: 1.7; }
+.seg:focus-visible > path { stroke: var(--ice); stroke-width: 2; }
 .knob {
   position: absolute; left: 50%; top: 50%; width: 88px; height: 88px; margin: -44px 0 0 -44px; border-radius: 50%; border: 0; cursor: pointer; color: #1a211c;
-  background: radial-gradient(circle at 34% 28%, #ffffff, #e3e9df 52%, #a9b3a6);
-  box-shadow: 0 0 0 3px #cfd6cb, 0 0 0 4px #7d877b, 0 10px 22px rgba(0, 0, 0, .7), 0 0 26px rgba(200, 255, 0, .22), inset 0 -3px 6px rgba(0, 0, 0, .18);
+  background: linear-gradient(145deg, #28333b, #10181e 65%); color: var(--ice);
+  box-shadow: 0 0 0 1px rgba(230,240,248,.32), 0 0 0 6px #080e13, 0 0 0 7px rgba(255,188,56,.28), 0 12px 28px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.16);
   display: grid; place-items: center; transition: transform .18s var(--spring);
 }
-.knob::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; border: 1px dotted rgba(26, 33, 28, .55); }
+.knob::before { content: ""; position: absolute; inset: 7px; border-radius: 50%; border: 1px solid rgba(210,230,244,.1); }
 .knob:hover { transform: scale(1.04); }
 .knob:active { transform: scale(.97); }
 .knob svg { width: 22px; height: 22px; }
-.knob span { position: absolute; bottom: 17px; font: 500 7px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.knob span { position: absolute; bottom: 15px; font: 500 8px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--holo); }
 
 .radial-fan { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; }
 .radial-fan > svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
@@ -175,3 +176,17 @@
   .notch-slab, .dock, .gauge .arc, .knob, .fan-item { transition: none; }
   .radial-ring, .radial-scrim, .fan-item, .dock-pop, .notch.busy .pix { animation: none; }
 }
+
+/* Command wheel refinement: quiet surfaces, legible icons, stable item alignment. */
+.radial .radial-scrim { background: rgba(3,8,12,.76); backdrop-filter: blur(5px); }
+.radial .base { fill: #0c141a; stroke: rgba(190,216,234,.2); }
+.radial .radial-ring { filter: drop-shadow(0 16px 32px rgba(0,0,0,.55)); }
+.radial .fan-item { min-width: 230px; height: 40px; padding: 0 15px; border-radius: 10px; background: rgba(14,23,30,.96); border: 1px solid rgba(188,216,235,.17); color: #e0e8ed; box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 20px rgba(0,0,0,.18); transform: translate(var(--dx),var(--dy)); }
+.radial .fan-item.hi, .radial .fan-item:hover, .radial .fan-item:focus-visible { background: #202720; border-color: rgba(255,188,56,.55); color: #fff3da; transform: translate(calc(var(--dx) + 4px),var(--dy)); }
+.radial .fan-item svg { width: 18px; height: 18px; color: var(--ice-dim); }
+.radial .fan-item.hi svg, .radial .fan-item[aria-checked="true"] svg { color: var(--holo); }
+.radial .fan-item small { font-size: 10px; margin-left: auto; color: #9aabb7; }
+.radial .fan-title { font-size: 10px; color: #a8b8c3; letter-spacing: .25em; }
+.radial .radial-fan > svg path { stroke: rgba(255,188,56,.36); }
+.radial .radial-fan.stack .fan-item { min-width: 0; transform: none; height: 46px; }
+@media (prefers-reduced-motion: reduce) { .radial .seg > path, .radial .seg .ico { transition: none; } }

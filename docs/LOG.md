@@ -5,6 +5,17 @@ Add yours at the top. Do not rewrite older entries. Never paste secrets, keys or
 
 ---
 
+## 2026-11-12 · Claude · GitHub MCP server added (read-only)
+
+- **Changed:** `mcp-servers.json` has `github` at `https://api.githubcopilot.com/mcp/readonly` (GitHub
+  itself refuses writes), key `${GITHUB_MCP_TOKEN}` from `.env` (fine-grained, read-only token Kunal made).
+  16 of its 29 tools allowed: repos, files, code, commits, branches, issues, PRs, releases, `get_me`.
+  Left out: people and team lists, Copilot jobs, secret scanner, UI helper.
+- **Verified:** `/api/apps` shows github 29 tools / 16 allowed. Claude Haiku listed the last 3 commits of
+  `kunalsingh2k1/lanuk-envi` through Envi; local qwen3.5:4b called `github__get_me`. Server stayed up.
+- **Not verified:** Codex with GitHub (ChatGPT usage limit); the local 4B model's wording after a tool call
+  was loose (it mixed in unrelated context), so use Claude for GitHub questions that need precision.
+
 ## 2026-11-12 · Claude · Any MCP server can join the hub
 
 - **Decided by Kunal:** general MCP support ("let me add any"), first real server to be chosen together.
